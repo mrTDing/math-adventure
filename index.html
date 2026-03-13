@@ -78,7 +78,6 @@
             </div>
             <div id="tips">
                 <p>⬅️➡️ 移动 | 空格/⬆️ 跳跃(可二段跳)</p>
-                <p>Z/X键发射回旋镖(5次消灭敌人)</p>
                 <p>顶问号答题，吃糖果，到旗帜过关！</p>
             </div>
         </div>
@@ -102,10 +101,7 @@
                 <div class="tbtn" id="l">⬅️</div>
                 <div class="tbtn" id="r">➡️</div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <div class="tbtn" id="b" style="background: rgba(139, 69, 19, 0.5);">🪃</div>
-                <div class="tbtn" id="j">⬆️</div>
-            </div>
+            <div class="tbtn" id="j">⬆️</div>
         </div>
     </div>
 
@@ -170,7 +166,6 @@ let gameMode = ''; // 'platformer' or 'elimination'
 // ==================== 横版闯关变量 ====================
 let player, blocks = [], coins = [], questions = [], flag, cam = 0;
 let items = []; // 道具
-let boomerangs = []; // 回旋镖
 
 // 道具类型
 const ITEM_TYPES = {
@@ -374,81 +369,6 @@ class Item {
         ctx.restore();
     }
 }
-
-// ==================== 回旋镖类 ====================
-class Boomerang {
-    constructor(x, y, dir) {
-        this.x = x; this.y = y;
-        this.startX = x;
-        this.dir = dir; // 1 或 -1
-        this.vx = 8 * dir;
-        this.vy = 0;
-        this.radius = 10;
-        this.rotation = 0;
-        this.active = true;
-        this.returning = false;
-        this.maxDist = 300;
-        this.life = 180; // 最大生命周期 3秒 (60fps)
-    }
-    update() {
-        if (!this.active) return;
-        this.life--;
-        if (this.life <= 0) { this.active = false; return; }
-        this.rotation += 0.3;
-        if (!this.returning) {
-            this.x += this.vx;
-            // 到达最大距离后返回
-            if (Math.abs(this.x - this.startX) > this.maxDist) {
-                this.returning = true;
-            }
-            // 飞出世界边界太远也返回
-            const maxX = level === 1 ? 5000 : (level === 2 ? 6500 : 8000);
-            if (this.x < -100 || this.x > maxX + 100 || this.y < -100 || this.y > 600) {
-                this.returning = true;
-            }
-        } else {
-            // 返回马里奥
-            const dx = player.x - this.x;
-            const dy = player.y - this.y;
-            const distSq = dx*dx + dy*dy;
-            const dist = Math.sqrt(distSq);
-            // 距离足够近或生命周期快结束直接消失
-            if (dist < 40 || dist === 0 || this.life < 30) {
-                this.active = false;
-            } else if (dist < 100) {
-                // 很近时快速吸附
-                this.x = player.x;
-                this.y = player.y;
-                this.active = false;
-            } else {
-                // 正常返回 - 确保速度不会太慢
-                const speed = Math.max(Math.min(dist * 0.2, 15), 8);
-                this.x += (dx / dist) * speed;
-                this.y += (dy / dist) * speed;
-            }
-        }
-    }
-    draw() {
-        if (!this.active) return;
-        ctx.save();
-        ctx.translate(this.x - cam, this.y);
-        ctx.rotate(this.rotation);
-        // 绘制回旋镖
-        ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.moveTo(-10, -5);
-        ctx.quadraticCurveTo(0, -15, 10, -5);
-        ctx.quadraticCurveTo(5, 0, 10, 5);
-        ctx.quadraticCurveTo(0, 15, -10, 5);
-        ctx.quadraticCurveTo(-5, 0, -10, -5);
-        ctx.fill();
-        // 中心高光
-        ctx.fillStyle = '#D2691E';
-        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
-        ctx.restore();
-    }
-}
-
 // ==================== 敌人类 ====================
 class Enemy {
     constructor(x, y, patrolDist = 100) {
@@ -587,28 +507,6 @@ function updatePlatformer() {
     }
     // 道具物理
     for (let item of items) item.update();
-    // 回旋镖更新
-    for (let b of boomerangs) b.update();
-    boomerangs = boomerangs.filter(b => b.active);
-
-    // 回旋镖与敌人碰撞
-    for (let b of boomerangs) {
-        if (!b.active) continue;
-        for (let e of enemies) {
-            if (!e.dead && Math.hypot(b.x-e.x, b.y-e.y) < 30) {
-                const isDead = e.hit();
-                if (isDead) {
-                    score += 100;
-                    showHint('💥 消灭敌人! +100');
-                    AudioSys.playCoin();
-                } else {
-                    showHint(`💢 击中! HP:${e.hp}/5`);
-                }
-                b.active = false; // 回旋镖击中后消失
-                break;
-            }
-        }
-    }
 
     // 敌人更新和碰撞
     for (let e of enemies) {
@@ -669,8 +567,6 @@ function drawPlatformer() {
     for (let item of items) item.draw();
     // 糖果
     for (let c of coins) c.draw();
-    // 回旋镖
-    for (let b of boomerangs) b.draw();
     // 敌人
     for (let e of enemies) e.draw();
     // 问题
@@ -1037,23 +933,7 @@ document.addEventListener('keydown', e => {
     if (e.code === 'Space') {
         e.preventDefault();
         if (state === 'play' && gameMode === 'platformer') {
-            // 如果按着下键，发射回旋镖；否则跳跃
-            if (keys['ArrowDown'] || keys['KeyS']) {
-                // 发射回旋镖
-                const dir = keys['ArrowLeft'] ? -1 : 1; // 根据面向方向发射
-                boomerangs.push(new Boomerang(player.x, player.y, dir));
-                AudioSys.playJump();
-            } else {
-                player.jump();
-            }
-        }
-    }
-    if (e.code === 'KeyZ' || e.code === 'KeyX') {
-        // Z或X键也可以发射回旋镖
-        if (state === 'play' && gameMode === 'platformer') {
-            const dir = keys['ArrowLeft'] ? -1 : 1;
-            boomerangs.push(new Boomerang(player.x, player.y, dir));
-            AudioSys.playJump();
+            player.jump();
         }
     }
     if (e.code === 'Escape') { if (state === 'play') pauseGame(); else if (state === 'pause') resumeGame(); }
@@ -1069,15 +949,6 @@ function touch(id, key, isJump) {
 touch('l', 'ArrowLeft', false);
 touch('r', 'ArrowRight', false);
 touch('j', 'Space', true);
-// 回旋镖按钮
-document.getElementById('b').addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (state === 'play' && gameMode === 'platformer') {
-        const dir = keys['ArrowLeft'] ? -1 : 1;
-        boomerangs.push(new Boomerang(player.x, player.y, dir));
-        AudioSys.playJump();
-    }
-});
 
 // 消消乐点击
 cvs.addEventListener('click', e => {
