@@ -1483,12 +1483,14 @@ const SPECIAL_ITEMS = {
     MINE: { emoji: '💣', type: 'mine', score: -50 },
     BURGER: { emoji: '🍔', type: 'food', score: 30 },
     CLOUD: { emoji: '☁️', type: 'slow', score: 0 },
-    FREEZE: { emoji: '❄️', type: 'freeze', score: 0 }
+    FREEZE: { emoji: '❄️', type: 'freeze', score: 0 },
+    LIGHTNING: { emoji: '⚡', type: 'speed', score: 0 } // 闪电加速
 };
 
 function startElimination() {
     AudioSys.init();
     AudioSys.playClick();
+    setTimeout(() => AudioSys.startBGM(), 500);
     elimMode = true;
     state = 'play';
     elimTarget = Math.floor(Math.random() * 6) + 5; // 5-10
@@ -1577,9 +1579,12 @@ function elimSpawnItems() {
         } else if (rand < 0.32) {
             // 云朵
             elimItems.push(createSpecialItem(i * colWidth + colWidth/2, 'CLOUD'));
-        } else if (rand < 0.38) {
+        } else if (rand < 0.42) {
             // 冰冻
             elimItems.push(createSpecialItem(i * colWidth + colWidth/2, 'FREEZE'));
+        } else if (rand < 0.46) {
+            // 闪电加速
+            elimItems.push(createSpecialItem(i * colWidth + colWidth/2, 'LIGHTNING'));
         } else {
             // 数字 0-10
             const num = Math.floor(Math.random() * 11);
@@ -1752,6 +1757,11 @@ function handleSpecialItem(item) {
             i.freezeTime = 300; // 5秒
         });
         showHint('❄️ 冰冻！');
+    } else if (item.special === 'LIGHTNING') {
+        // 闪电加速 - 临时提升全局速度
+        elimSpeed = Math.min(elimSpeed + 2, 6);
+        showHint('⚡ 加速！');
+        AudioSys.playRocket();
     }
 
     item.cleared = true;
