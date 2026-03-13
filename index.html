@@ -225,6 +225,7 @@
 
         <div id="ui">
             <span>⭐ <span id="score">0</span></span>
+            <span id="muteBtn" style="cursor:pointer;font-size:20px;" onclick="toggleMute()">🔊</span>
             <span>🏆 <span id="highScore">0</span></span>
         </div>
 
@@ -306,6 +307,312 @@
 const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d');
 const previewCvs = document.getElementById('previewCvs'), previewCtx = previewCvs.getContext('2d');
 
+// ==================== 音效系统 ====================
+const AudioSys = {
+    ctx: null,
+    bgmOsc: null,
+    bgmGain: null,
+    isMuted: false,
+
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+
+    // 播放跳跃音效 - 短促上升音
+    playJump() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.1);
+    },
+
+    // 播放落地/撞击音效 - 低沉短音
+    playLand() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.08);
+    },
+
+    // 播放收集金币音效 - 清脆高音
+    playCoin() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(1600, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.15);
+    },
+
+    // 播放获得道具音效 - 上升琶音
+    playPowerUp() {
+        if (this.isMuted || !this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+        notes.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.type = 'square';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, this.ctx.currentTime + i * 0.05);
+            gain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + i * 0.05 + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.05 + 0.1);
+
+            osc.start(this.ctx.currentTime + i * 0.05);
+            osc.stop(this.ctx.currentTime + i * 0.05 + 0.1);
+        });
+    },
+
+    // 播放变身音效 - 特殊效果音
+    playTransform() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.3);
+    },
+
+    // 播放火箭冲刺音效
+    playRocket() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.5);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.5);
+    },
+
+    // 播放失败音效 - 下降音
+    playFail() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.5);
+    },
+
+    // 播放胜利/通关音效 - 庆祝和弦
+    playWin() {
+        if (this.isMuted || !this.ctx) return;
+        const chords = [
+            [523.25, 659.25, 783.99],  // C major
+            [659.25, 783.99, 987.77],  // E minor
+            [783.99, 987.77, 1174.66], // G major
+            [1046.50, 1318.51, 1567.98] // C major high
+        ];
+
+        chords.forEach((chord, i) => {
+            chord.forEach(freq => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, this.ctx.currentTime + i * 0.2);
+                gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + i * 0.2 + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.2 + 0.4);
+
+                osc.start(this.ctx.currentTime + i * 0.2);
+                osc.stop(this.ctx.currentTime + i * 0.2 + 0.4);
+            });
+        });
+    },
+
+    // 播放按钮点击音效
+    playClick() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.05);
+    },
+
+    // 背景音乐 - 简单循环旋律
+    startBGM() {
+        if (this.isMuted || !this.ctx || this.bgmOsc) return;
+        // 使用简单的鼓点节奏代替复杂旋律，避免单调
+        this.playBeat();
+    },
+
+    playBeat() {
+        if (this.isMuted || !this.ctx || state !== 'play') return;
+
+        // 低音鼓点
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+        osc.start(this.ctx.currentTime);
+        osc.stop(this.ctx.currentTime + 0.1);
+
+        // 每0.5秒一个节拍
+        setTimeout(() => this.playBeat(), 500);
+    },
+
+    stopBGM() {
+        this.bgmOsc = null;
+    },
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        return this.isMuted;
+    }
+};
+
+// ==================== 视觉特效系统 ====================
+const Effects = {
+    shake: 0,
+    flash: 0,
+    floatingTexts: [],
+    screenFlashColor: null,
+
+    // 屏幕震动
+    addShake(amount) {
+        this.shake = Math.max(this.shake, amount);
+    },
+
+    // 屏幕闪烁
+    addFlash(color, duration) {
+        this.screenFlashColor = color;
+        this.flash = duration;
+    },
+
+    // 添加浮动文字
+    addFloatingText(text, x, y, color = '#FFD700') {
+        this.floatingTexts.push({
+            text, x, y, color,
+            vy: -2,
+            life: 40,
+            scale: 1
+        });
+    },
+
+    update() {
+        // 震动衰减
+        if (this.shake > 0) this.shake *= 0.9;
+        if (this.shake < 0.5) this.shake = 0;
+
+        // 闪烁衰减
+        if (this.flash > 0) this.flash--;
+
+        // 更新浮动文字
+        this.floatingTexts = this.floatingTexts.filter(ft => {
+            ft.y += ft.vy;
+            ft.vy *= 0.95;
+            ft.life--;
+            ft.scale = 1 + (40 - ft.life) * 0.02;
+            return ft.life > 0;
+        });
+    },
+
+    apply(ctx) {
+        // 应用震动
+        if (this.shake > 0) {
+            const dx = (Math.random() - 0.5) * this.shake;
+            const dy = (Math.random() - 0.5) * this.shake;
+            ctx.translate(dx, dy);
+        }
+    },
+
+    draw(ctx) {
+        // 绘制屏幕闪烁
+        if (this.flash > 0 && this.screenFlashColor) {
+            ctx.save();
+            ctx.globalAlpha = this.flash / 10 * 0.3;
+            ctx.fillStyle = this.screenFlashColor;
+            ctx.fillRect(0, 0, cvs.width, cvs.height);
+            ctx.restore();
+        }
+
+        // 绘制浮动文字
+        this.floatingTexts.forEach(ft => {
+            ctx.save();
+            ctx.translate(ft.x, ft.y);
+            ctx.scale(ft.scale, ft.scale);
+            ctx.globalAlpha = ft.life / 40;
+            ctx.fillStyle = ft.color;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.strokeText(ft.text, 0, 0);
+            ctx.fillText(ft.text, 0, 0);
+            ctx.restore();
+        });
+    }
+};
+
 // 设置画布大小
 function resize() {
     const game = document.getElementById('game');
@@ -352,12 +659,15 @@ const ITEM_TYPES = {
 
 // ==================== 界面控制 ====================
 function showCustomize() {
+    AudioSys.init();
+    AudioSys.playClick();
     document.getElementById('start').style.display = 'none';
     document.getElementById('customize').style.display = 'flex';
     updatePreview();
 }
 
 function backToMenu() {
+    AudioSys.playClick();
     document.getElementById('over').style.display = 'none';
     document.getElementById('elimTarget').style.display = 'none';
     document.getElementById('start').style.display = 'flex';
@@ -367,6 +677,7 @@ function backToMenu() {
 }
 
 function selectCharacter(char, card) {
+    AudioSys.playClick();
     config.character = char;
 
     // 设置角色属性
@@ -411,6 +722,7 @@ class Player {
         this.growTime = 0; // 变大剩余时间
         this.invincible = 0; // 无敌时间
         this.magnetTime = 0; // 磁铁时间
+        this.trail = []; // 跳跃拖尾轨迹
     }
 
     update() {
@@ -456,12 +768,22 @@ class Player {
         if (this.y > camera + cvs.height + 100) {
             gameOver();
         }
+
+        // 更新跳跃拖尾
+        if (!this.grounded && Math.abs(this.vy) > 2) {
+            this.trail.push({x: this.x, y: this.y - camera, alpha: 0.6});
+        }
+        this.trail = this.trail.filter(t => {
+            t.alpha -= 0.05;
+            return t.alpha > 0;
+        });
     }
 
     jump() {
         if (this.grounded) {
             this.vy = config.jumpPower;
             this.grounded = false;
+            AudioSys.playJump();
         }
     }
 
@@ -470,6 +792,15 @@ class Player {
         if (screenY < -50 || screenY > cvs.height + 50) return;
 
         ctx.save();
+
+        // 绘制跳跃拖尾
+        this.trail.forEach((t, i) => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${t.alpha * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, this.r * (0.5 + i * 0.02), 0, Math.PI * 2);
+            ctx.fill();
+        });
+
         ctx.translate(this.x, screenY);
 
         // 无敌闪烁效果
@@ -816,6 +1147,14 @@ function update() {
             player.x < p.x + p.w + player.r &&
             player.y + player.r > p.y + 5 &&
             player.y + player.r < p.y + 30) {
+            // 只有之前不在地面才播放音效
+            if (!player.grounded) {
+                AudioSys.playLand();
+                // 落地时的灰尘粒子
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new Particle(player.x, player.y + player.r, '#D3D3D3'));
+                }
+            }
             player.y = p.y - player.r;
             player.vy = 0;
             player.grounded = true;
@@ -888,6 +1227,10 @@ function generateMorePlatforms(startY) {
 function hitGift(gift) {
     gift.hit = true;
     player.vy = 3; // 稍微反弹
+    AudioSys.playCoin(); // 开启盒子音效
+
+    // 屏幕轻微震动
+    Effects.addShake(5);
 
     // 产生粒子
     for (let i = 0; i < 8; i++) {
@@ -911,29 +1254,50 @@ function collectItem(type) {
     if (item.effect === 'score') {
         score += item.score;
         showHint(item.emoji + ' +' + item.score);
+        AudioSys.playCoin();
+        Effects.addFloatingText('+' + item.score, player.x, player.y - 50);
         updateUI();
     } else if (item.effect === 'grow') {
         player.growTime = 300; // 5秒变大
         showHint('🍄 蘑菇！变大了！');
+        AudioSys.playTransform();
+        Effects.addShake(8);
+        Effects.addFlash('#FF69B4', 10);
     } else if (item.effect === 'invincible') {
         player.invincible = 300; // 5秒无敌
         showHint('⭐ 星星！无敌状态！');
+        AudioSys.playPowerUp();
+        Effects.addShake(5);
+        Effects.addFlash('#FFD700', 15);
     } else if (item.effect === 'heal') {
         // 汉堡回血 - 给额外生命保护
         player.invincible = 180; // 3秒保护
         showHint('🍔 汉堡！恢复体力！');
+        AudioSys.playPowerUp();
+        Effects.addFloatingText('♥', player.x, player.y - 60, '#FF6B6B');
     } else if (item.effect === 'slow') {
         // 冰淇淋减速所有物品下落
         items.forEach(i => i.vy *= 0.5);
         showHint('🍦 冰淇淋！减速中...');
+        AudioSys.playCoin();
+        Effects.addFlash('#87CEEB', 10);
     } else if (item.effect === 'boost') {
         // 火箭冲刺向上
         player.vy = -20;
         showHint('🚀 火箭！冲刺！');
+        AudioSys.playRocket();
+        Effects.addShake(10);
+        Effects.addFlash('#FF4500', 20);
+        // 火箭尾焰粒子
+        for (let i = 0; i < 15; i++) {
+            particles.push(new Particle(player.x, player.y + 30, '#FF4500'));
+        }
     } else if (item.effect === 'magnet') {
         // 磁铁效果 - 自动吸引附近金币
         player.magnetTime = 300; // 5秒磁铁
         showHint('🧲 磁铁！吸引金币！');
+        AudioSys.playPowerUp();
+        Effects.addFlash('#DAA520', 10);
     }
 }
 
@@ -1027,13 +1391,22 @@ function draw() {
 function loop() {
     if (state === 'play') {
         update();
+        Effects.update();
+        ctx.save();
+        Effects.apply(ctx);
         draw();
+        Effects.draw(ctx);
+        ctx.restore();
     }
     requestAnimationFrame(loop);
 }
 
 // ==================== 游戏控制 ====================
 function startGame() {
+    AudioSys.init();
+    AudioSys.playClick();
+    setTimeout(() => AudioSys.startBGM(), 500);
+
     document.getElementById('customize').style.display = 'none';
     document.getElementById('touch').style.display = 'flex';
     state = 'play';
@@ -1042,6 +1415,7 @@ function startGame() {
 }
 
 function restart() {
+    AudioSys.playClick();
     document.getElementById('over').style.display = 'none';
     document.getElementById('touch').style.display = 'flex';
     state = 'play';
@@ -1053,21 +1427,27 @@ function restart() {
     } else {
         init();
         loop();
+        AudioSys.startBGM();
     }
 }
 
 function gameOver() {
     state = 'over';
-    document.getElementById('touch').style.display = 'none';
+    AudioSys.stopBGM();
 
     if (score > highScore) {
         highScore = score;
         localStorage.setItem('mathDemonHigh', highScore);
         document.getElementById('endTitle').textContent = '🎉 新纪录!';
+        AudioSys.playWin(); // 新纪录播放胜利音效
+        Effects.addShake(15);
     } else {
         document.getElementById('endTitle').textContent = '💥 掉下去了!';
+        AudioSys.playFail(); // 失败音效
+        Effects.addShake(10);
     }
 
+    document.getElementById('touch').style.display = 'none';
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalHigh').textContent = highScore;
     document.getElementById('over').style.display = 'flex';
@@ -1076,6 +1456,12 @@ function gameOver() {
 function updateUI() {
     document.getElementById('score').textContent = score;
     document.getElementById('highScore').textContent = highScore;
+}
+
+function toggleMute() {
+    AudioSys.init();
+    const isMuted = AudioSys.toggleMute();
+    document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
 }
 
 // ==================== 消消乐模式 ====================
