@@ -1,0 +1,22 @@
+{
+  "name": "数学小恶魔探险记",
+  "short_name": "数学冒险",
+  "description": "帮助小角仔学习数学的冒险闯关游戏",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#667eea",
+  "theme_color": "#764ba2",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%23EC4899' width='192' height='192' rx='32'/%3E%3Ccircle fill='%23F472B6' cx='96' cy='100' r='55'/%3E%3Cpath fill='%238B5CF6' d='M65 45 L55 20 L75 48 Z'/%3E%3Cpath fill='%238B5CF6' d='M127 45 L137 20 L117 48 Z'/%3E%3Ccircle fill='white' cx='75' cy='95' r='18'/%3E%3Ccircle fill='white' cx='117' cy='95' r='18'/%3E%3Ccircle fill='%231F2937' cx='75' cy='95' r='8'/%3E%3Ccircle fill='%231F2937' cx='117' cy='95' r='8'/%3E%3Cpath stroke='%231F2937' stroke-width='4' fill='none' d='M85 125 Q96 135 107 125'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect fill='%23EC4899' width='512' height='512' rx='64'/%3E%3Ccircle fill='%23F472B6' cx='256' cy='260' r='150'/%3E%3Cpath fill='%238B5CF6' d='M170 110 L140 40 L190 115 Z'/%3E%3Cpath fill='%238B5CF6' d='M342 110 L372 40 L322 115 Z'/%3E%3Ccircle fill='white' cx='210' cy='240' r='50'/%3E%3Ccircle fill='white' cx='302' cy='240' r='50'/%3E%3Ccircle fill='%231F2937' cx='210' cy='240' r='22'/%3E%3Ccircle fill='%231F2937' cx='302' cy='240' r='22'/%3E%3Cpath stroke='%231F2937' stroke-width='8' fill='none' d='M230 320 Q256 340 282 320'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
