@@ -33,8 +33,8 @@
         #touch.elim-mode { justify-content: center; }
         .tbtn { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid white; display: flex; justify-content: center; align-items: center; font-size: 24px; pointer-events: auto; }
         .tbtn:active { background: rgba(255,255,255,0.5); }
-        /* 消消乐隐藏方向键 */
-        #touch.elim-mode .move-btn { display: none; }
+        /* 消消乐隐藏所有控制按钮 */
+        #touch.elim-mode { display: none !important; }
 
         @media (max-width: 768px) {
             html, body { background: #87CEEB; overflow: hidden; margin: 0; padding: 0; height: 100%; width: 100%; }
@@ -136,7 +136,30 @@ const AudioSys = {
     playChord(freqs, duration) {
         freqs.forEach(f => this.playTone(f, f, duration, 'triangle'));
     },
-    toggleMute() { this.isMuted = !this.isMuted; return this.isMuted; }
+    toggleMute() { this.isMuted = !this.isMuted; return this.isMuted; },
+    // 语音提示 - 使用Web Speech API
+    speak(text, lang = 'zh-CN') {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // 停止之前的语音
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = lang;
+            utter.rate = 1.1;
+            utter.pitch = 1.2;
+            utter.volume = 0.8;
+            window.speechSynthesis.speak(utter);
+        }
+    },
+    speakPraise(praise) {
+        // 将英文赞扬转为中文语音
+        const praiseMap = {
+            'GOOD!': '真棒',
+            'GREAT!': '太棒了',
+            'PERFECT!': '完美',
+            'AWESOME!': '厉害',
+            'EXCELLENT!': '优秀'
+        };
+        this.speak(praiseMap[praise] || '真棒');
+    }
 };
 
 // ==================== 游戏变量 ====================
@@ -300,12 +323,12 @@ class Coin {
 class QBlock {
     constructor(x,y,diff) {
         this.x=x; this.y=y; this.done=false; this.diff=diff; this.q=this.makeQ();
-        // 随机分配道具类型
+        // 随机分配道具类型 - 各道具概率均等 (各20%)
         const rand = Math.random();
-        if (rand < 0.3) this.itemType = 'MUSHROOM';
-        else if (rand < 0.5) this.itemType = 'STAR';
-        else if (rand < 0.7) this.itemType = 'SUNFLOWER';
-        else if (rand < 0.85) this.itemType = 'COIN';
+        if (rand < 0.2) this.itemType = 'MUSHROOM';
+        else if (rand < 0.4) this.itemType = 'STAR';
+        else if (rand < 0.6) this.itemType = 'SUNFLOWER';
+        else if (rand < 0.8) this.itemType = 'COIN';
         else this.itemType = 'DIAMOND';
         this.itemSpawned = false;
     }
@@ -839,10 +862,11 @@ function elimHandleNumber(item) {
             const midY = (elimSelected[0].y + elimSelected[1].y) / 2;
             elimSelected.forEach(s=>s.cleared=true);
             elimScore += sum * 10;
-            // 赞扬文字
+            // 赞扬文字 + 语音
             const praises = ['GOOD!', 'GREAT!', 'PERFECT!', 'AWESOME!', 'EXCELLENT!'];
             const praise = praises[Math.floor(Math.random() * praises.length)];
             elimEffects.push({x: midX, y: midY, text: praise, life: 60, scale: 1});
+            AudioSys.speakPraise(praise);
             // 连击加分
             if (Math.random() > 0.5) {
                 elimEffects.push({x: midX, y: midY - 40, text: '+' + (sum * 10), life: 40, scale: 0.8, color: '#FFD700'});
