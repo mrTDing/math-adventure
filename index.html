@@ -1153,23 +1153,15 @@ function update() {
     player.grounded = false;
     for (let p of platforms) {
         p.update();
-        if (player.vy >= -2 && // 下落或接近静止时都可以碰撞
+        // 严格碰撞条件：只有站在平台表面才算
+        if (player.vy >= -1 && // 下落或轻微上升时
             player.x > p.x - player.r &&
             player.x < p.x + p.w + player.r &&
-            player.y + player.r > p.y - 10 && // 上方容错增大
-            player.y + player.r < p.y + 40) { // 下方容错增大
-            // 只有之前不在地面才播放音效
-            if (!player.grounded) {
-                AudioSys.playLand();
-                // 落地时的灰尘粒子
-                for (let i = 0; i < 5; i++) {
-                    particles.push(new Particle(player.x, player.y + player.r, '#D3D3D3'));
-                }
-            }
-            player.y = p.y - player.r;
+            player.y + player.r >= p.y - 5 && // 平台表面上方5像素内
+            player.y + player.r <= p.y + 5) { // 平台表面下方5像素内（防止穿透）
+            player.y = p.y - player.r; // 精确站在平台上
             player.vy = 0;
             player.grounded = true;
-            // 不再自动跳跃，玩家自己控制
         }
     }
 
