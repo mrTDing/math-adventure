@@ -1320,29 +1320,62 @@ function collectItem(type) {
 
 // ==================== 数学题 ====================
 let currentMath = null;
+let currentMathAnswer = null;
 
 function showMathQuestion() {
     state = 'math';
+    AudioSys.playClick();
 
-    const a = Math.floor(Math.random() * 10) + 1;
-    const b = Math.floor(Math.random() * 10) + 1;
-    const ans = a + b;
-    currentMath = ans;
+    // 根据高度选择难度
+    const height = Math.floor((cvs.height - 50 - player.y) / 100);
+    let type;
+    if (height < 10) { type = ['add_easy'][Math.floor(Math.random() * 1)]; }
+    else if (height < 30) { type = ['add', 'sub'][Math.floor(Math.random() * 2)]; }
+    else { type = ['add', 'sub', 'compare'][Math.floor(Math.random() * 3)]; }
 
-    document.getElementById('mathQ').textContent = `${a} + ${b} = ?`;
+    let text, ans, options = [];
+
+    if (type === 'add_easy') {
+        const a = Math.floor(Math.random() * 5) + 1;
+        const b = Math.floor(Math.random() * 5) + 1;
+        text = `${a} + ${b} = ?`;
+        ans = a + b;
+    } else if (type === 'add') {
+        const a = Math.floor(Math.random() * 10) + 5;
+        const b = Math.floor(Math.random() * 10) + 1;
+        text = `${a} + ${b} = ?`;
+        ans = a + b;
+    } else if (type === 'sub') {
+        const a = Math.floor(Math.random() * 10) + 10;
+        const b = Math.floor(Math.random() * a);
+        text = `${a} - ${b} = ?`;
+        ans = a - b;
+    } else if (type === 'compare') {
+        const a = Math.floor(Math.random() * 15) + 1;
+        const b = Math.floor(Math.random() * 15) + 1;
+        text = `${a} ○ ${b}`;
+        ans = a > b ? '>' : (a < b ? '<' : '=');
+    }
+
+    currentMathAnswer = ans;
+    document.getElementById('mathQ').textContent = text;
 
     // 生成选项
     const btns = document.getElementById('mathBtns');
     btns.innerHTML = '';
 
-    let options = [ans];
-    while (options.length < 3) {
-        const wrong = ans + Math.floor(Math.random() * 10) - 5;
-        if (wrong > 0 && wrong !== ans && !options.includes(wrong)) {
-            options.push(wrong);
+    if (type === 'compare') {
+        options = ['>', '<', '='];
+    } else {
+        options = [ans];
+        while (options.length < 3) {
+            const wrong = ans + Math.floor(Math.random() * 10) - 5;
+            if (wrong >= 0 && wrong !== ans && !options.includes(wrong)) {
+                options.push(wrong);
+            }
         }
+        options.sort(() => Math.random() - 0.5);
     }
-    options.sort(() => Math.random() - 0.5);
 
     options.forEach(opt => {
         const btn = document.createElement('button');
@@ -1359,11 +1392,14 @@ function answerMath(ans) {
     document.getElementById('mathPanel').style.display = 'none';
     state = 'play';
 
-    if (ans === currentMath) {
+    if (ans === currentMathAnswer) {
         score += 100;
         showHint('✅ 正确！+100');
+        AudioSys.playCoin();
+        Effects.addFloatingText('+100', player.x, player.y - 50, '#4ade80');
     } else {
         showHint('❌ 错误！');
+        AudioSys.playFail();
     }
     updateUI();
 }
