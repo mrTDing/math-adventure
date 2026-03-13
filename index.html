@@ -30,8 +30,11 @@
 
         /* 手机触控 */
         #touch { position: absolute; bottom: 15px; left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 15px; pointer-events: none; }
+        #touch.elim-mode { justify-content: center; }
         .tbtn { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid white; display: flex; justify-content: center; align-items: center; font-size: 24px; pointer-events: auto; }
         .tbtn:active { background: rgba(255,255,255,0.5); }
+        /* 消消乐隐藏方向键 */
+        #touch.elim-mode .move-btn { display: none; }
 
         @media (max-width: 768px) {
             body { background: #87CEEB; display: block; overflow: hidden; margin: 0; padding: 0; height: 100vh; width: 100vw; }
@@ -683,6 +686,8 @@ function startElimination() {
     document.getElementById('gameUI').style.display = 'none';
     document.getElementById('elimUI').style.display = 'inline';
     document.getElementById('elimTarget').style.display = 'block';
+    // 消消乐模式隐藏移动按钮
+    document.getElementById('touch').classList.add('elim-mode');
     state = 'play'; elimScore = 0; elimItems = []; elimSelected = [];
     elimTimer = 0; elimSpeed = 1.5; elimSpawnTimer = 0;
     elimTarget = Math.floor(Math.random() * 6) + 5;
@@ -759,6 +764,28 @@ function elimDraw() {
     // 分数
     ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'left';
     ctx.fillText('💎 ' + elimScore, 15, 35);
+    // 动效文字
+    for (let i = elimEffects.length - 1; i >= 0; i--) {
+        let eff = elimEffects[i];
+        eff.life--;
+        eff.y -= 1; // 向上飘
+        eff.scale += 0.01;
+        if (eff.life <= 0) {
+            elimEffects.splice(i, 1);
+            continue;
+        }
+        ctx.save();
+        ctx.translate(eff.x, eff.y);
+        ctx.scale(eff.scale, eff.scale);
+        ctx.globalAlpha = eff.life / 60;
+        ctx.fillStyle = eff.color || (eff.text.includes('PERFECT') ? '#FF69B4' : eff.text.includes('GREAT') ? '#FFD700' : '#4ade80');
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'white';
+        ctx.shadowBlur = 10;
+        ctx.fillText(eff.text, 0, 0);
+        ctx.restore();
+    }
 }
 
 function elimClick(x, y) {
@@ -774,12 +801,31 @@ function elimClick(x, y) {
 }
 
 function elimHandleSpecial(item) {
-    if (item.special === 'MINE') { elimScore -= 50; elimEndGame(); }
-    else if (item.special === 'CLOUD') { elimItems.forEach(i=>i.y-=100); }
-    else if (item.special === 'FREEZE') { elimItems.forEach(i=>{i.frozen=true;i.freezeTime=300;}); }
-    else if (item.special === 'LIGHTNING') { elimSpeed = Math.min(elimSpeed+2, 6); }
+    if (item.special === 'MINE') {
+        elimScore -= 50;
+        elimEffects.push({x: item.x, y: item.y, text: 'BOOM!', life: 40, scale: 1, color: '#FF0000'});
+        elimEndGame();
+    }
+    else if (item.special === 'CLOUD') {
+        elimItems.forEach(i=>i.y-=100);
+        elimEffects.push({x: cvs.width/2, y: cvs.height/2, text: 'SLOW!', life: 50, scale: 1.2, color: '#87CEEB'});
+        AudioSys.playCoin();
+    }
+    else if (item.special === 'FREEZE') {
+        elimItems.forEach(i=>{i.frozen=true;i.freezeTime=300;});
+        elimEffects.push({x: cvs.width/2, y: cvs.height/2, text: 'FREEZE!', life: 50, scale: 1.2, color: '#00CED1'});
+        AudioSys.playTransform();
+    }
+    else if (item.special === 'LIGHTNING') {
+        elimSpeed = Math.min(elimSpeed+2, 6);
+        elimEffects.push({x: cvs.width/2, y: cvs.height/2, text: 'SPEED UP!', life: 50, scale: 1.2, color: '#FFD700'});
+        AudioSys.playTransform();
+    }
     item.cleared = true;
 }
+
+// 消除动效文字
+let elimEffects = [];
 
 function elimHandleNumber(item) {
     if (item.selected) { item.selected = false; elimSelected = elimSelected.filter(s=>s!==item); }
@@ -787,11 +833,28 @@ function elimHandleNumber(item) {
     if (elimSelected.length === 2) {
         const sum = elimSelected[0].value + elimSelected[1].value;
         if (sum === elimTarget) {
+            const midX = (elimSelected[0].x + elimSelected[1].x) / 2;
+            const midY = (elimSelected[0].y + elimSelected[1].y) / 2;
             elimSelected.forEach(s=>s.cleared=true);
-            elimScore += sum * 10; elimTarget = Math.floor(Math.random()*6)+5;
+            elimScore += sum * 10;
+            // 赞扬文字
+            const praises = ['GOOD!', 'GREAT!', 'PERFECT!', 'AWESOME!', 'EXCELLENT!'];
+            const praise = praises[Math.floor(Math.random() * praises.length)];
+            elimEffects.push({x: midX, y: midY, text: praise, life: 60, scale: 1});
+            // 连击加分
+            if (Math.random() > 0.5) {
+                elimEffects.push({x: midX, y: midY - 40, text: '+' + (sum * 10), life: 40, scale: 0.8, color: '#FFD700'});
+            }
+            elimTarget = Math.floor(Math.random()*6)+5;
             document.getElementById('elimTargetNum').textContent = elimTarget;
             document.getElementById('targetNum').textContent = elimTarget;
             AudioSys.playCoin();
+        } else {
+            // 错误提示
+            const midX = (elimSelected[0].x + elimSelected[1].x) / 2;
+            const midY = (elimSelected[0].y + elimSelected[1].y) / 2;
+            elimEffects.push({x: midX, y: midY, text: 'TRY AGAIN!', life: 40, scale: 0.8, color: '#FF6B6B'});
+            AudioSys.playFail();
         }
         elimSelected.forEach(s=>s.selected=false); elimSelected = [];
     }
@@ -812,6 +875,8 @@ function startPlatformer() {
     document.getElementById('start').style.display = 'none';
     document.getElementById('gameUI').style.display = 'inline';
     document.getElementById('elimUI').style.display = 'none';
+    // 横版模式显示移动按钮
+    document.getElementById('touch').classList.remove('elim-mode');
     level = 1; score = 0; candies = 0;
     state = 'play'; initPlatformer(); loop();
 }
