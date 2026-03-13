@@ -225,7 +225,10 @@
 
         <div id="ui">
             <span>⭐ <span id="score">0</span></span>
-            <span id="muteBtn" style="cursor:pointer;font-size:20px;" onclick="toggleMute()">🔊</span>
+            <div>
+                <span id="pauseBtn" style="cursor:pointer;font-size:20px;margin-right:10px;" onclick="pauseGame()">⏸️</span>
+                <span id="muteBtn" style="cursor:pointer;font-size:20px;" onclick="toggleMute()">🔊</span>
+            </div>
             <span>🏆 <span id="highScore">0</span></span>
         </div>
 
@@ -244,7 +247,6 @@
                 向上跳跃或数字消消乐
             </p>
             <button onclick="showCustomize()">🏃 纵向跳跃</button>
-            <button onclick="startPlatformer()">🏰 横版闯关</button>
             <button onclick="startElimination()">🧩 数字消消乐</button>
         </div>
 
@@ -290,6 +292,15 @@
             <div style="margin-top: 20px;">
                 <button onclick="restart()">🔄 再玩一次</button>
                 <button class="btn-small" onclick="backToMenu()">← 主菜单</button>
+            </div>
+        </div>
+
+        <!-- 暂停界面 -->
+        <div id="pause" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 250;">
+            <h1>⏸️ 游戏暂停</h1>
+            <div style="margin-top: 20px;">
+                <button onclick="resumeGame()">▶️ 继续游戏</button>
+                <button class="btn-small" onclick="backToMenu()">← 返回主菜单</button>
             </div>
         </div>
 
@@ -674,7 +685,6 @@ function backToMenu() {
     document.getElementById('start').style.display = 'flex';
     state = 'start';
     elimMode = false;
-    platformerMode = false;
 }
 
 function selectCharacter(char, card) {
@@ -725,6 +735,7 @@ class Player {
         this.magnetTime = 0; // 磁铁时间
         this.trail = []; // 跳跃拖尾轨迹
         this.jumpCooldown = 0; // 跳跃冷却，防止连续跳跃
+        this.jumpCount = 0; // 当前跳跃次数（支持二段跳）
     }
 
     update() {
@@ -785,11 +796,12 @@ class Player {
     }
 
     jump() {
-        // 可以跳跃的条件：在地面上，或者有跳跃冷却（coyote time）
-        if ((this.grounded || this.jumpCooldown > 0) && this.vy >= 0) {
-            this.vy = config.jumpPower;
+        // 支持二段跳：在空中还可以跳一次
+        if (this.jumpCount < 2) {
+            this.vy = config.jumpPower * (this.jumpCount === 1 ? 0.85 : 1); // 二段跳稍微弱一点
             this.grounded = false;
-            this.jumpCooldown = 0; // 使用掉跳跃机会
+            this.jumpCooldown = 0;
+            this.jumpCount++;
             AudioSys.playJump();
             // 跳跃时产生灰尘粒子
             for (let i = 0; i < 5; i++) {
@@ -1129,9 +1141,9 @@ function generateLevel() {
 
         platforms.push(new Platform(x, y, w, type));
 
-        // 70%概率生成礼物盒
+        // 礼物盒放在平台上方更高处，需要跳跃才能撞到（类似马里奥）
         if (Math.random() < 0.6) {
-            gifts.push(new GiftBox(x + w/2 - 17, y - 45));
+            gifts.push(new GiftBox(x + w/2 - 17, y - 80));
         }
 
         y -= Math.random() * 50 + 90; // 平台间距
@@ -1162,6 +1174,7 @@ function update() {
             player.y = p.y - player.r; // 精确站在平台上
             player.vy = 0;
             player.grounded = true;
+            player.jumpCount = 0; // 落地重置跳跃次数
         }
     }
 
@@ -1219,8 +1232,9 @@ function generateMorePlatforms(startY) {
         const type = Math.random() < 0.35 ? 'moving' : 'static';
         platforms.push(new Platform(x, y, w, type));
 
+        // 礼物盒放在平台上方更高处，需要跳跃才能撞到
         if (Math.random() < 0.7) {
-            gifts.push(new GiftBox(x + w/2 - 17, y - 45));
+            gifts.push(new GiftBox(x + w/2 - 17, y - 80));
         }
 
         y -= Math.random() * 60 + 80;
@@ -1392,7 +1406,7 @@ function draw() {
 }
 
 function loop() {
-    if (state === 'play' && !platformerMode) {
+    if (state === 'play') {
         update();
         Effects.update();
         ctx.save();
@@ -1423,9 +1437,7 @@ function restart() {
     document.getElementById('touch').style.display = 'flex';
     state = 'play';
 
-    if (platformerMode) {
-        startPlatformer();
-    } else if (elimMode) {
+    if (elimMode) {
         startElimination();
     } else {
         init();
@@ -1465,6 +1477,23 @@ function toggleMute() {
     AudioSys.init();
     const isMuted = AudioSys.toggleMute();
     document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+}
+
+// ==================== 暂停功能 ====================
+function pauseGame() {
+    if (state === 'play') {
+        state = 'pause';
+        document.getElementById('pause').style.display = 'flex';
+        AudioSys.stopBGM();
+    }
+}
+
+function resumeGame() {
+    if (state === 'pause') {
+        state = 'play';
+        document.getElementById('pause').style.display = 'none';
+        AudioSys.startBGM();
+    }
 }
 
 // ==================== 消消乐模式 ====================
@@ -1856,16 +1885,8 @@ const btnJump = document.getElementById('btnJump');
 let jumpPressed = false;
 
 function tryJump() {
-    // 横版闯关模式
-    if (platformerMode && platPlayer) {
-        platPlayer.jump();
-        return;
-    }
-    // 纵向跳跃模式
     if (state === 'play' && player) {
-        if (player.grounded || player.jumpCooldown > 0) {
-            player.jump();
-        }
+        player.jump();
     }
 }
 
@@ -1907,469 +1928,6 @@ if (window.DeviceOrientationEvent) {
             }
         }
     });
-}
-
-// ==================== 横版闯关模式（马里奥风格）====================
-let platformerMode = false;
-let platPlayer;
-let platCamera = 0;
-let platLevelLength = 3000;
-let platEnemies = [];
-let platTraps = [];
-let platCoins = [];
-let platGoal = null;
-let platPlatforms = [];
-let platHighScore = localStorage.getItem('platHigh') || 0;
-
-// 陷阱类型
-const TRAP_TYPES = {
-    FIRE: { emoji: '🔥', width: 40, height: 60 },
-    GATE: { emoji: '🚪', width: 50, height: 80 }
-};
-
-// 敌人AI
-class PlatEnemy {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.w = 30;
-        this.h = 30;
-        this.speed = 1.5;
-        this.dir = -1;
-        this.patrolStart = x - 80;
-        this.patrolEnd = x + 80;
-    }
-
-    update() {
-        this.x += this.speed * this.dir;
-        if (this.x <= this.patrolStart || this.x >= this.patrolEnd) {
-            this.dir *= -1;
-        }
-    }
-
-    draw() {
-        const screenX = this.x - platCamera;
-        if (screenX < -50 || screenX > cvs.width + 50) return;
-
-        ctx.font = '30px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.dir < 0 ? '👹' : '👺', screenX + this.w/2, this.y + this.h);
-    }
-}
-
-// 陷阱（火焰/闸门）
-class PlatTrap {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.type = type;
-        this.timer = 0;
-        this.active = true;
-        this.cycle = type === 'FIRE' ? 180 : 300; // 火焰3秒循环，闸门5秒
-        this.dangerTime = type === 'FIRE' ? 120 : 180; // 危险持续时间
-    }
-
-    update() {
-        this.timer++;
-        if (this.timer >= this.cycle) this.timer = 0;
-
-        // 火焰：大部分时间危险，短暂安全
-        // 闸门：大部分时间关闭（安全），短暂开启（危险，需要快速通过）
-        if (this.type === 'FIRE') {
-            this.active = this.timer < this.dangerTime;
-        } else {
-            this.active = this.timer >= this.cycle - this.dangerTime;
-        }
-    }
-
-    draw() {
-        const screenX = this.x - platCamera;
-        if (screenX < -100 || screenX > cvs.width + 100) return;
-
-        const trap = TRAP_TYPES[this.type];
-
-        if (this.type === 'FIRE') {
-            // 火焰效果
-            if (this.active) {
-                const flicker = Math.sin(Date.now() / 50) * 5;
-                ctx.font = `${trap.height + flicker}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.fillText('🔥', screenX + trap.width/2, this.y + trap.height);
-
-                // 危险提示
-                ctx.fillStyle = 'rgba(255,0,0,0.3)';
-                ctx.fillRect(screenX - 5, this.y, trap.width + 10, trap.height + 10);
-            } else {
-                // 安全状态
-                ctx.font = '20px Arial';
-                ctx.fillText('✓', screenX + trap.width/2, this.y + 30);
-            }
-        } else if (this.type === 'GATE') {
-            // 闸门
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(screenX, this.y, trap.width, trap.height);
-
-            if (this.active) {
-                // 门开 - 红色警告
-                ctx.fillStyle = 'rgba(255,0,0,0.5)';
-                ctx.fillRect(screenX, this.y, trap.width, trap.height);
-                ctx.fillStyle = 'white';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('快跑!', screenX + trap.width/2, this.y - 10);
-            } else {
-                // 门关 - 安全
-                ctx.fillStyle = '#654321';
-                ctx.fillRect(screenX + 5, this.y + 5, trap.width - 10, trap.height - 10);
-                ctx.fillStyle = '#4ADE80';
-                ctx.font = '12px Arial';
-                ctx.fillText('安全', screenX + trap.width/2, this.y + trap.height/2);
-            }
-        }
-    }
-}
-
-// 金币
-class PlatCoin {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.collected = false;
-        this.bounce = Math.random() * Math.PI * 2;
-    }
-
-    update() {
-        this.bounce += 0.1;
-    }
-
-    draw() {
-        if (this.collected) return;
-        const screenX = this.x - platCamera;
-        if (screenX < -30 || screenX > cvs.width + 30) return;
-
-        const bounceY = Math.sin(this.bounce) * 3;
-        ctx.font = '25px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🪙', screenX, this.y + bounceY);
-    }
-}
-
-// 横版玩家
-class PlatPlayer {
-    constructor() {
-        this.x = 50;
-        this.y = cvs.height - 150;
-        this.vx = 0;
-        this.vy = 0;
-        this.w = 25;
-        this.h = 25;
-        this.grounded = false;
-        this.dead = false;
-    }
-
-    update() {
-        if (this.dead) return;
-
-        // 移动 - 降低速度到3
-        if (keys['ArrowLeft']) this.vx = -3;
-        else if (keys['ArrowRight']) this.vx = 3;
-        else this.vx *= 0.8;
-
-        // 重力
-        this.vy += 0.6;
-
-        this.x += this.vx;
-        this.y += this.vy;
-
-        // 边界
-        if (this.x < 0) { this.x = 0; this.vx = 0; }
-        if (this.x > platLevelLength) { this.x = platLevelLength; this.vx = 0; }
-        if (this.y > cvs.height) platGameOver();
-
-        // 平台碰撞
-        this.grounded = false;
-        for (let p of platPlatforms) {
-            if (this.vy > 0 &&
-                this.x + this.w > p.x &&
-                this.x < p.x + p.w &&
-                this.y + this.h > p.y &&
-                this.y + this.h < p.y + 25) {
-                this.y = p.y - this.h;
-                this.vy = 0;
-                this.grounded = true;
-            }
-        }
-    }
-
-    jump() {
-        if (this.grounded && !this.dead) {
-            this.vy = -11;
-            this.grounded = false;
-        }
-    }
-
-    draw() {
-        if (this.dead) return;
-        const screenX = this.x - platCamera;
-        if (screenX < -50 || screenX > cvs.width + 50) return;
-
-        // 绘制角色
-        ctx.save();
-        ctx.translate(screenX + this.w/2, this.y + this.h/2);
-
-        // 根据角色类型绘制不同颜色
-        let bodyColor1, bodyColor2;
-        switch(config.character) {
-            case 'yellow':
-                bodyColor1 = '#FFD700'; bodyColor2 = '#FFA500';
-                break;
-            case 'pink':
-                bodyColor1 = '#FFB6C1'; bodyColor2 = '#FF69B4';
-                break;
-            case 'blue':
-                bodyColor1 = '#87CEEB'; bodyColor2 = '#4169E1';
-                break;
-            case 'black':
-                bodyColor1 = '#696969'; bodyColor2 = '#2F4F4F';
-                break;
-            default:
-                bodyColor1 = '#FFD700'; bodyColor2 = '#FFA500';
-        }
-
-        // 身体
-        const g = ctx.createRadialGradient(-5, -5, 0, 0, 0, this.w);
-        g.addColorStop(0, bodyColor1);
-        g.addColorStop(1, bodyColor2);
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.w, 0, Math.PI*2);
-        ctx.fill();
-
-        // 装饰
-        ctx.fillStyle = '#8B5CF6';
-        if (config.hair === 'horns') {
-            ctx.beginPath(); ctx.moveTo(-10, -15); ctx.lineTo(-15, -28); ctx.lineTo(-5, -18); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(10, -15); ctx.lineTo(15, -28); ctx.lineTo(5, -18); ctx.fill();
-        } else if (config.hair === 'bow') {
-            ctx.fillStyle = '#FF69B4';
-            ctx.beginPath(); ctx.arc(-8, -20, 6, 0, Math.PI*2); ctx.arc(8, -20, 6, 0, Math.PI*2); ctx.fill();
-        } else if (config.hair === 'crown') {
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.moveTo(-12, -15); ctx.lineTo(-8, -25); ctx.lineTo(0, -18);
-            ctx.lineTo(8, -25); ctx.lineTo(12, -15);
-            ctx.fill();
-        }
-
-        // 眼睛
-        ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(-7, -2, 5, 0, Math.PI*2); ctx.arc(7, -2, 5, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#333';
-        ctx.beginPath(); ctx.arc(-7, -2, 2.5, 0, Math.PI*2); ctx.arc(7, -2, 2.5, 0, Math.PI*2); ctx.fill();
-
-        ctx.restore();
-    }
-}
-
-function startPlatformer() {
-    AudioSys.init();
-    AudioSys.playClick();
-    setTimeout(() => AudioSys.startBGM(), 500);
-    platformerMode = true;
-    state = 'play';
-    score = 0;
-    platCamera = 0;
-
-    document.getElementById('start').style.display = 'none';
-    document.getElementById('ui').style.display = 'flex';
-    document.getElementById('touch').style.display = 'flex';
-
-    platInitLevel();
-    platLoop();
-}
-
-function platInitLevel() {
-    platPlayer = new PlatPlayer();
-    platEnemies = [];
-    platTraps = [];
-    platCoins = [];
-    platPlatforms = [];
-
-    // 生成地面平台
-    let x = 0;
-    while (x < platLevelLength) {
-        const w = Math.random() * 60 + 80;
-        const gap = x === 0 ? 0 : Math.random() * 40 + 30; // 第一块没有空隙
-        x += gap;
-
-        const y = cvs.height - 50 - Math.random() * 100;
-        platPlatforms.push({ x, y, w, h: 20 });
-
-        // 随机生成内容
-        if (x > 200 && Math.random() < 0.4) {
-            // 敌人
-            platEnemies.push(new PlatEnemy(x + w/2, y - 30));
-        }
-        if (x > 300 && Math.random() < 0.3) {
-            // 陷阱 - 火焰或闸门
-            const type = Math.random() < 0.5 ? 'FIRE' : 'GATE';
-            platTraps.push(new PlatTrap(x + w/2, y - TRAP_TYPES[type].height, type));
-        }
-        if (Math.random() < 0.5) {
-            // 金币
-            platCoins.push(new PlatCoin(x + w/2, y - 50));
-        }
-
-        x += w;
-    }
-
-    // 终点旗帜
-    platGoal = { x: platLevelLength + 50, y: cvs.height - 150 };
-}
-
-function platUpdate() {
-    if (state !== 'play' || !platformerMode) return;
-
-    platPlayer.update();
-
-    // 相机跟随
-    platCamera = platPlayer.x - cvs.width * 0.3;
-    if (platCamera < 0) platCamera = 0;
-    if (platCamera > platLevelLength - cvs.width) platCamera = platLevelLength - cvs.width;
-
-    // 更新敌人
-    for (let e of platEnemies) {
-        e.update();
-        // 碰撞检测
-        if (!platPlayer.dead &&
-            platPlayer.x < e.x + e.w &&
-            platPlayer.x + platPlayer.w > e.x &&
-            platPlayer.y < e.y + e.h &&
-            platPlayer.y + platPlayer.h > e.y) {
-            platGameOver();
-        }
-    }
-
-    // 更新陷阱
-    for (let t of platTraps) {
-        t.update();
-        // 碰撞检测
-        if (!platPlayer.dead && t.active &&
-            platPlayer.x < t.x + TRAP_TYPES[t.type].width &&
-            platPlayer.x + platPlayer.w > t.x &&
-            platPlayer.y < t.y + TRAP_TYPES[t.type].height &&
-            platPlayer.y + platPlayer.h > t.y) {
-            platGameOver();
-        }
-    }
-
-    // 更新金币
-    for (let c of platCoins) {
-        c.update();
-        if (!c.collected &&
-            platPlayer.x < c.x + 15 &&
-            platPlayer.x + platPlayer.w > c.x - 15 &&
-            platPlayer.y < c.y + 15 &&
-            platPlayer.y + platPlayer.h > c.y - 15) {
-            c.collected = true;
-            score += 50;
-            updateUI();
-        }
-    }
-
-    // 检查到达终点
-    if (platPlayer.x >= platGoal.x) {
-        platWin();
-    }
-}
-
-function platDraw() {
-    // 背景
-    const gradient = ctx.createLinearGradient(0, 0, 0, cvs.height);
-    gradient.addColorStop(0, '#4A90E2');
-    gradient.addColorStop(1, '#87CEEB');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-    // 远景云朵
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    for (let i = 0; i < 5; i++) {
-        const cx = (i * 200 - platCamera * 0.3) % (cvs.width + 200);
-        ctx.beginPath();
-        ctx.arc(cx, 100 + i * 30, 40 + i * 10, 0, Math.PI*2);
-        ctx.fill();
-    }
-
-    // 平台
-    for (let p of platPlatforms) {
-        const screenX = p.x - platCamera;
-        if (screenX < -100 || screenX > cvs.width + 100) continue;
-
-        // 草地平台
-        ctx.fillStyle = '#4ADE80';
-        ctx.fillRect(screenX, p.y, p.w, p.h);
-        ctx.fillStyle = '#22C55E';
-        ctx.fillRect(screenX, p.y + p.h - 5, p.w, 5);
-    }
-
-    // 终点旗帜
-    const goalScreenX = platGoal.x - platCamera;
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(goalScreenX, platGoal.y, 5, 60);
-    ctx.fillStyle = '#FF6B6B';
-    ctx.beginPath();
-    ctx.moveTo(goalScreenX + 5, platGoal.y);
-    ctx.lineTo(goalScreenX + 35, platGoal.y + 15);
-    ctx.lineTo(goalScreenX + 5, platGoal.y + 30);
-    ctx.fill();
-
-    // 游戏对象
-    for (let c of platCoins) c.draw();
-    for (let t of platTraps) t.draw();
-    for (let e of platEnemies) e.draw();
-    platPlayer.draw();
-
-    // 进度提示
-    const progress = Math.floor((platPlayer.x / platLevelLength) * 100);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`进度: ${progress}%`, cvs.width/2, 80);
-}
-
-function platLoop() {
-    if (state !== 'play' || !platformerMode) return;
-    platUpdate();
-    platDraw();
-    requestAnimationFrame(platLoop);
-}
-
-function platGameOver() {
-    platPlayer.dead = true;
-    state = 'over';
-    platformerMode = false;
-
-    document.getElementById('endTitle').textContent = '💀 游戏结束';
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('finalHigh').textContent = platHighScore;
-    document.getElementById('over').style.display = 'flex';
-}
-
-function platWin() {
-    state = 'over';
-    platformerMode = false;
-
-    if (score > platHighScore) {
-        platHighScore = score;
-        localStorage.setItem('platHigh', platHighScore);
-        document.getElementById('endTitle').textContent = '🎉 通关新纪录!';
-    } else {
-        document.getElementById('endTitle').textContent = '🏆 通关成功!';
-    }
-
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('finalHigh').textContent = platHighScore;
-    document.getElementById('over').style.display = 'flex';
 }
 
 // 初始化显示
