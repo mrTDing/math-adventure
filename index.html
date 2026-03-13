@@ -305,7 +305,8 @@
 
 <script>
 const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d');
-const previewCvs = document.getElementById('previewCvs'), previewCtx = previewCvs.getContext('2d');
+// preview canvas 已移除，相关功能禁用
+let previewCtx = null;
 
 // ==================== 音效系统 ====================
 const AudioSys = {
@@ -663,7 +664,7 @@ function showCustomize() {
     AudioSys.playClick();
     document.getElementById('start').style.display = 'none';
     document.getElementById('customize').style.display = 'flex';
-    updatePreview();
+    // 移除不存在的 updatePreview 调用
 }
 
 function backToMenu() {
@@ -683,24 +684,24 @@ function selectCharacter(char, card) {
     // 设置角色属性
     switch(char) {
         case 'yellow': // 小黄蛋 - 平衡
-            config.jumpPower = -12;
-            config.speed = 5;
+            config.jumpPower = -10;
+            config.speed = 3;
             config.weight = 1;
             break;
         case 'pink': // 小粉蛋 - 跳跃强
-            config.jumpPower = -14;
-            config.speed = 4.5;
+            config.jumpPower = -12;
+            config.speed = 2.8;
             config.weight = 0.9;
             break;
         case 'blue': // 小蓝蛋 - 速度快
-            config.jumpPower = -11;
-            config.speed = 6;
+            config.jumpPower = -9;
+            config.speed = 3.5;
             config.weight = 1;
             break;
         case 'black': // 小黑蛋 - 重量大
-            config.jumpPower = -10;
-            config.speed = 4;
-            config.weight = 1.3;
+            config.jumpPower = -8;
+            config.speed = 2.5;
+            config.weight = 1.2;
             break;
     }
 
@@ -713,16 +714,17 @@ function selectCharacter(char, card) {
 class Player {
     constructor() {
         this.x = cvs.width / 2;
-        this.y = cvs.height - 150;
+        this.y = cvs.height - 70; // 站在平台上方 (平台在cvs.height-50, 半径20)
         this.vx = 0;
         this.vy = 0;
         this.r = 20;
         this.baseR = 20;
-        this.grounded = false;
+        this.grounded = true; // 初始时站在地面上
         this.growTime = 0; // 变大剩余时间
         this.invincible = 0; // 无敌时间
         this.magnetTime = 0; // 磁铁时间
         this.trail = []; // 跳跃拖尾轨迹
+        this.jumpCooldown = 0; // 跳跃冷却，防止连续跳跃
     }
 
     update() {
@@ -769,6 +771,9 @@ class Player {
             gameOver();
         }
 
+        // 跳跃冷却递减（coyote time - 离开平台后短暂时间仍可跳跃）
+        if (this.jumpCooldown > 0) this.jumpCooldown--;
+
         // 更新跳跃拖尾
         if (!this.grounded && Math.abs(this.vy) > 2) {
             this.trail.push({x: this.x, y: this.y - camera, alpha: 0.6});
@@ -780,10 +785,16 @@ class Player {
     }
 
     jump() {
-        if (this.grounded) {
+        // 可以跳跃的条件：在地面上，或者有跳跃冷却（coyote time）
+        if ((this.grounded || this.jumpCooldown > 0) && this.vy >= 0) {
             this.vy = config.jumpPower;
             this.grounded = false;
+            this.jumpCooldown = 0; // 使用掉跳跃机会
             AudioSys.playJump();
+            // 跳跃时产生灰尘粒子
+            for (let i = 0; i < 5; i++) {
+                particles.push(new Particle(this.x, this.y + this.r, 'rgba(200,200,200,0.5)'));
+            }
         }
     }
 
@@ -1142,11 +1153,11 @@ function update() {
     player.grounded = false;
     for (let p of platforms) {
         p.update();
-        if (player.vy > 0 &&
+        if (player.vy >= -2 && // 下落或接近静止时都可以碰撞
             player.x > p.x - player.r &&
             player.x < p.x + p.w + player.r &&
-            player.y + player.r > p.y + 5 &&
-            player.y + player.r < p.y + 30) {
+            player.y + player.r > p.y - 10 && // 上方容错增大
+            player.y + player.r < p.y + 40) { // 下方容错增大
             // 只有之前不在地面才播放音效
             if (!player.grounded) {
                 AudioSys.playLand();
@@ -1366,7 +1377,7 @@ function draw() {
 
     // 绘制云朵背景
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    const cloudOffset = camera * 0.3;
+    const cloudOffset = camera * 0.15;
     for (let [x, y, r] of [[50,100,25], [150,80,30], [250,120,20], [350,90,28]]) {
         ctx.beginPath();
         ctx.arc(x, y - cloudOffset % 1000, r, 0, Math.PI*2);
@@ -1389,7 +1400,7 @@ function draw() {
 }
 
 function loop() {
-    if (state === 'play') {
+    if (state === 'play' && !platformerMode) {
         update();
         Effects.update();
         ctx.save();
@@ -1484,6 +1495,8 @@ const SPECIAL_ITEMS = {
 };
 
 function startElimination() {
+    AudioSys.init();
+    AudioSys.playClick();
     elimMode = true;
     state = 'play';
     elimTarget = Math.floor(Math.random() * 6) + 5; // 5-10
@@ -1836,13 +1849,47 @@ btnRight.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowRi
 btnRight.addEventListener('touchend', e => { e.preventDefault(); keys['ArrowRight'] = false; }, { passive: false });
 
 // 跳跃按钮
+// 跳跃按钮 - 改进灵敏度
 const btnJump = document.getElementById('btnJump');
+let jumpPressed = false;
+
+function tryJump() {
+    // 横版闯关模式
+    if (platformerMode && platPlayer) {
+        platPlayer.jump();
+        return;
+    }
+    // 纵向跳跃模式
+    if (state === 'play' && player) {
+        if (player.grounded || player.jumpCooldown > 0) {
+            player.jump();
+        }
+    }
+}
+
 btnJump.addEventListener('touchstart', e => {
     e.preventDefault();
-    if (state === 'play' && player && player.grounded) player.jump();
+    jumpPressed = true;
+    tryJump();
 }, { passive: false });
-btnJump.addEventListener('mousedown', () => {
-    if (state === 'play' && player && player.grounded) player.jump();
+
+btnJump.addEventListener('touchend', e => {
+    e.preventDefault();
+    jumpPressed = false;
+}, { passive: false });
+
+// 鼠标支持
+btnJump.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    tryJump();
+});
+
+// 空格键和方向键上键也支持跳跃
+document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        tryJump();
+    }
 });
 
 // 重力感应（可选）
@@ -2021,9 +2068,9 @@ class PlatPlayer {
     update() {
         if (this.dead) return;
 
-        // 移动
-        if (keys['ArrowLeft']) this.vx = -4;
-        else if (keys['ArrowRight']) this.vx = 4;
+        // 移动 - 降低速度到3
+        if (keys['ArrowLeft']) this.vx = -3;
+        else if (keys['ArrowRight']) this.vx = 3;
         else this.vx *= 0.8;
 
         // 重力
@@ -2068,10 +2115,29 @@ class PlatPlayer {
         ctx.save();
         ctx.translate(screenX + this.w/2, this.y + this.h/2);
 
+        // 根据角色类型绘制不同颜色
+        let bodyColor1, bodyColor2;
+        switch(config.character) {
+            case 'yellow':
+                bodyColor1 = '#FFD700'; bodyColor2 = '#FFA500';
+                break;
+            case 'pink':
+                bodyColor1 = '#FFB6C1'; bodyColor2 = '#FF69B4';
+                break;
+            case 'blue':
+                bodyColor1 = '#87CEEB'; bodyColor2 = '#4169E1';
+                break;
+            case 'black':
+                bodyColor1 = '#696969'; bodyColor2 = '#2F4F4F';
+                break;
+            default:
+                bodyColor1 = '#FFD700'; bodyColor2 = '#FFA500';
+        }
+
         // 身体
         const g = ctx.createRadialGradient(-5, -5, 0, 0, 0, this.w);
-        g.addColorStop(0, '#F472B6');
-        g.addColorStop(1, '#EC4899');
+        g.addColorStop(0, bodyColor1);
+        g.addColorStop(1, bodyColor2);
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(0, 0, this.w, 0, Math.PI*2);
@@ -2104,6 +2170,9 @@ class PlatPlayer {
 }
 
 function startPlatformer() {
+    AudioSys.init();
+    AudioSys.playClick();
+    setTimeout(() => AudioSys.startBGM(), 500);
     platformerMode = true;
     state = 'play';
     score = 0;
