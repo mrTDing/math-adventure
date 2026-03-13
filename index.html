@@ -305,7 +305,8 @@
 
 <script>
 const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d');
-const previewCvs = document.getElementById('previewCvs'), previewCtx = previewCvs.getContext('2d');
+// preview canvas 已移除，相关功能禁用
+let previewCtx = null;
 
 // ==================== 音效系统 ====================
 const AudioSys = {
@@ -663,7 +664,7 @@ function showCustomize() {
     AudioSys.playClick();
     document.getElementById('start').style.display = 'none';
     document.getElementById('customize').style.display = 'flex';
-    updatePreview();
+    // 移除不存在的 updatePreview 调用
 }
 
 function backToMenu() {
@@ -1484,6 +1485,8 @@ const SPECIAL_ITEMS = {
 };
 
 function startElimination() {
+    AudioSys.init();
+    AudioSys.playClick();
     elimMode = true;
     state = 'play';
     elimTarget = Math.floor(Math.random() * 6) + 5; // 5-10
@@ -2104,6 +2107,9 @@ class PlatPlayer {
 }
 
 function startPlatformer() {
+    AudioSys.init();
+    AudioSys.playClick();
+    setTimeout(() => AudioSys.startBGM(), 500);
     platformerMode = true;
     state = 'play';
     score = 0;
