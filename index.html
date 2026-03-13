@@ -388,9 +388,12 @@ class Boomerang {
         this.active = true;
         this.returning = false;
         this.maxDist = 300;
+        this.life = 180; // 最大生命周期 3秒 (60fps)
     }
     update() {
         if (!this.active) return;
+        this.life--;
+        if (this.life <= 0) { this.active = false; return; }
         this.rotation += 0.3;
         if (!this.returning) {
             this.x += this.vx;
@@ -398,15 +401,28 @@ class Boomerang {
             if (Math.abs(this.x - this.startX) > this.maxDist) {
                 this.returning = true;
             }
+            // 飞出世界边界太远也返回
+            const maxX = level === 1 ? 5000 : (level === 2 ? 6500 : 8000);
+            if (this.x < -100 || this.x > maxX + 100 || this.y < -100 || this.y > 600) {
+                this.returning = true;
+            }
         } else {
             // 返回马里奥
             const dx = player.x - this.x;
             const dy = player.y - this.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 30 || dist === 0) {
+            const distSq = dx*dx + dy*dy;
+            const dist = Math.sqrt(distSq);
+            // 距离足够近或生命周期快结束直接消失
+            if (dist < 40 || dist === 0 || this.life < 30) {
+                this.active = false;
+            } else if (dist < 100) {
+                // 很近时快速吸附
+                this.x = player.x;
+                this.y = player.y;
                 this.active = false;
             } else {
-                const speed = Math.min(dist * 0.15, 12);
+                // 正常返回 - 确保速度不会太慢
+                const speed = Math.max(Math.min(dist * 0.2, 15), 8);
                 this.x += (dx / dist) * speed;
                 this.y += (dy / dist) * speed;
             }
