@@ -133,28 +133,33 @@ const AudioSys = {
         freqs.forEach(f => this.playTone(f, f, duration, 'triangle'));
     },
     toggleMute() { this.isMuted = !this.isMuted; return this.isMuted; },
-    // 语音提示 - 使用Web Speech API
+    // 语音提示 - 使用Web Speech API，选择更自然的语音
     speak(text, lang = 'zh-CN') {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // 停止之前的语音
+            window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = lang;
-            utter.rate = 1.1;
-            utter.pitch = 1.2;
-            utter.volume = 0.8;
+            utter.rate = 1.0;
+            utter.pitch = 1.0;
+            utter.volume = 0.9;
+            // 尝试选择更自然的语音
+            const voices = window.speechSynthesis.getVoices();
+            const zhVoice = voices.find(v => v.lang.includes('zh') && (v.name.includes('Ting') || v.name.includes('Yaoyao') || v.name.includes('Meijia') || v.name.includes('Google')));
+            if (zhVoice) utter.voice = zhVoice;
             window.speechSynthesis.speak(utter);
         }
     },
     speakPraise(praise) {
-        // 将英文赞扬转为中文语音
+        // 赞扬改用音效+简短语音，避免机械感
         const praiseMap = {
-            'GOOD!': '真棒',
-            'GREAT!': '太棒了',
+            'GOOD!': '棒',
+            'GREAT!': '真棒',
             'PERFECT!': '完美',
             'AWESOME!': '厉害',
             'EXCELLENT!': '优秀'
         };
-        this.speak(praiseMap[praise] || '真棒');
+        this.playWin();
+        setTimeout(() => this.speak(praiseMap[praise] || '棒'), 100);
     }
 };
 
@@ -179,6 +184,7 @@ const ITEM_TYPES = {
 // ==================== 消消乐变量 ====================
 let elimTarget = 10, elimScore = 0, elimItems = [], elimSelected = [];
 let elimTimer = 0, elimSpeed = 1.5, elimSpawnTimer = 0;
+let elimAnimId = null, platformerAnimId = null; // 动画帧ID
 const SPECIAL_ITEMS = {
     MINE: { emoji: '💣', type: 'mine', score: -50 },
     CLOUD: { emoji: '☁️', type: 'slow' },
@@ -530,10 +536,28 @@ function updatePlatformer() {
             }
         }
     }
-    // 答题
-    for (let q of questions) {
-        if (!q.done && Math.hypot(player.x-q.x, player.y-q.y) < 40) showQ(q);
-    }
+        // 问号方块 - 撞到随机决定出道具或出算术
+        for (let q of questions) {
+            if (!q.done && Math.hypot(player.x-q.x, player.y-q.y) < 40) {
+                // 50%概率出道具，50%概率出算术
+                if (Math.random() < 0.5 && !q.itemSpawned) {
+                    // 直接出道具
+                    const item = new Item(q.x, q.y, q.itemType);
+                    item.vy = -8;
+                    item.vx = (Math.random() - 0.5) * 2;
+                    items.push(item);
+                    q.itemSpawned = true;
+                    q.done = true; // 标记为已完成
+                    showHint(q.itemType === 'MUSHROOM' ? '🍄 蘑菇!' :
+                             q.itemType === 'STAR' ? '⭐ 星星!' :
+                             q.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
+                             q.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
+                } else {
+                    // 出算术题
+                    showQ(q);
+                }
+            }
+        }
     // 过关
     if (Math.abs(player.x-flag.x) < 40 && Math.abs(player.y-flag.y) < 60) win();
 }
@@ -618,6 +642,9 @@ function answer(block, sel) {
 // ==================== 消消乐 ====================
 function startElimination() {
     AudioSys.init(); AudioSys.playClick();
+    // 取消之前的动画帧，防止多个循环同时运行
+    if (elimAnimId) cancelAnimationFrame(elimAnimId);
+    if (platformerAnimId) cancelAnimationFrame(platformerAnimId);
     gameMode = 'elimination';
     document.getElementById('start').style.display = 'none';
     document.getElementById('gameUI').style.display = 'none';
@@ -636,7 +663,7 @@ function startElimination() {
 function elimLoop() {
     if ((state !== 'play' && state !== 'q') || gameMode !== 'elimination') return;
     elimUpdate(); elimDraw();
-    requestAnimationFrame(elimLoop);
+    elimAnimId = requestAnimationFrame(elimLoop);
 }
 
 function elimUpdate() {
@@ -809,6 +836,9 @@ function elimEndGame() {
 // ==================== 通用功能 ====================
 function startPlatformer() {
     AudioSys.init(); AudioSys.playClick();
+    // 取消之前的动画帧，防止多个循环同时运行
+    if (elimAnimId) cancelAnimationFrame(elimAnimId);
+    if (platformerAnimId) cancelAnimationFrame(platformerAnimId);
     gameMode = 'platformer';
     document.getElementById('start').style.display = 'none';
     document.getElementById('gameUI').style.display = 'inline';
@@ -822,11 +852,14 @@ function startPlatformer() {
 function loop() {
     if ((state !== 'play' && state !== 'q') || gameMode !== 'platformer') return;
     updatePlatformer(); drawPlatformer();
-    requestAnimationFrame(loop);
+    platformerAnimId = requestAnimationFrame(loop);
 }
 
 function restart() {
     document.getElementById('over').style.display = 'none';
+    // 取消之前的动画帧，防止多个循环同时运行
+    if (elimAnimId) cancelAnimationFrame(elimAnimId);
+    if (platformerAnimId) cancelAnimationFrame(platformerAnimId);
     if (gameMode === 'platformer') { level = 1; score = 0; candies = 0; initPlatformer(); state = 'play'; loop(); }
     else if (gameMode === 'elimination') { elimScore = 0; elimItems = []; elimSelected = []; elimSpeed = 1.5; elimTarget = Math.floor(Math.random()*6)+5; document.getElementById('elimTargetNum').textContent = elimTarget; document.getElementById('targetNum').textContent = elimTarget; state = 'play'; elimLoop(); }
 }
