@@ -645,7 +645,12 @@ class Player {
         const maxX = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
         if (this.x < this.r) this.x = this.r;
         if (this.x > maxX) this.x = maxX;
-        if (this.y > 600) { AudioSys.playFail(); restart(); }
+        if (this.y > 600) {
+            AudioSys.playFail();
+            state = 'over';
+            setTimeout(() => restart(), 50);
+            return;
+        }
 
         if (this.invincible > 0) {
             this.invincible--;
@@ -2229,7 +2234,8 @@ function updatePlatformer(timestamp) {
                 AudioSys.playFail();
             } else {
                 AudioSys.playFail();
-                restart();
+                state = 'over';
+                setTimeout(() => restart(), 50);
                 return;
             }
         }
@@ -2635,11 +2641,20 @@ function elimEndGame() {
 }
 
 // ==================== 马戏团跳火圈游戏 ====================
+// 跑道配置
+const CIRCUS_LANES = [
+    { id: 0, y: 320, label: '上' },
+    { id: 1, y: 400, label: '中' },
+    { id: 2, y: 480, label: '下' }
+];
+let currentLane = 1; // 默认中间跑道
+
 class CircusPlayer {
     constructor(animal) {
         this.animal = animal;
         this.x = 150;
-        this.y = 400;
+        this.y = CIRCUS_LANES[1].y; // 默认中间跑道
+        this.targetY = this.y;
         this.vy = 0;
         this.width = 60;
         this.height = 60;
@@ -2647,6 +2662,7 @@ class CircusPlayer {
         this.jumpPower = -18 * animal.jump;
         this.runSpeed = 5 * animal.speed;
         this.animationFrame = 0;
+        this.lane = 1; // 当前跑道 0=上, 1=中, 2=下
     }
 
     jump() {
@@ -2657,18 +2673,38 @@ class CircusPlayer {
         }
     }
 
+    changeLane(direction) {
+        // direction: -1 = 上, 1 = 下
+        const newLane = this.lane + direction;
+        if (newLane >= 0 && newLane <= 2) {
+            this.lane = newLane;
+            this.targetY = CIRCUS_LANES[newLane].y;
+            AudioSys.playClick();
+        }
+    }
+
     update() {
         this.animationFrame++;
         // 自动向前奔跑
         circusDistance += this.runSpeed * 0.1;
 
-        // 重力
-        this.vy += 0.8;
-        this.y += this.vy;
+        // 平滑切换跑道
+        const dy = this.targetY - this.y;
+        if (Math.abs(dy) > 2) {
+            this.y += dy * 0.15;
+        } else {
+            this.y = this.targetY;
+        }
+
+        // 重力（只在跳跃时生效）
+        if (!this.grounded || this.y < this.targetY - 5) {
+            this.vy += 0.8;
+            this.y += this.vy;
+        }
 
         // 地面检测
-        if (this.y > 400) {
-            this.y = 400;
+        if (this.y > this.targetY && this.vy > 0) {
+            this.y = this.targetY;
             this.vy = 0;
             this.grounded = true;
         }
@@ -2743,10 +2779,11 @@ class CircusPlayer {
 }
 
 class FireRing {
-    constructor(x, y, isQuestion = true) {
+    constructor(x, lane, isQuestion = true) {
         this.x = x;
-        this.y = y || 320; // 火圈中心离地高度（垂直方向），默认320
-        this.radius = 45; // 火圈半径
+        this.lane = lane; // 跑道 0=上, 1=中, 2=下
+        this.y = CIRCUS_LANES[lane].y; // 根据跑道设置Y坐标
+        this.radius = 40; // 火圈半径
         this.passed = false;
         this.isQuestion = isQuestion;
         this.question = isQuestion ? generateCircusQuestion() : null;
@@ -2790,24 +2827,25 @@ class FireRing {
             ctx.fill();
         }
 
-        // 火圈内圈（空心）
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        // 火圈内部（完全透明空心）
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius - 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+
+        // 火圈内边框（细线勾勒）
+        ctx.strokeStyle = '#FF6347';
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(0, 0, this.radius - 8, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 火圈内边框
-        ctx.strokeStyle = '#FF6347';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius - 5, 0, Math.PI * 2);
         ctx.stroke();
 
         // 火圈外边框
         ctx.strokeStyle = '#FF4500';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
+        ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
         ctx.stroke();
 
         // 如果已回答正确，显示绿色勾
@@ -2838,6 +2876,9 @@ class FireRing {
     }
 
     checkCollision(player) {
+        // 首先检查是否在同一个跑道
+        if (this.lane !== player.lane) return false;
+
         // 检查玩家是否从火圈中间穿过
         const dx = this.x - player.x;
         const dy = this.y - (player.y - 25); // 玩家中心点
@@ -2848,6 +2889,9 @@ class FireRing {
     }
 
     checkApproaching(player) {
+        // 首先检查是否在同一个跑道
+        if (this.lane !== player.lane) return false;
+
         // 检查是否接近火圈需要出题（距离火圈一定距离时）
         const dx = this.x - player.x;
         const dy = this.y - (player.y - 25);
@@ -2884,19 +2928,17 @@ function initCircus() {
     circusRings = [];
     circusQuestionActive = false;
     currentRing = null;
+    currentLane = 1; // 重置到中间跑道
 
-    // 生成火圈 - 不同高度，增加挑战性
+    // 生成火圈 - 随机出现在3条跑道之一
     let ringX = 800;
     const ringSpacing = 600;
     const totalRings = Math.floor(circusTargetDistance / ringSpacing);
 
-    // 火圈高度选项：低(容易)、中(需要跳跃)、高(需要大跳)
-    const ringHeights = [360, 320, 280, 240];
-
     for (let i = 0; i < totalRings; i++) {
-        // 随机选择火圈高度
-        const height = ringHeights[Math.floor(Math.random() * ringHeights.length)];
-        circusRings.push(new FireRing(ringX, height, true));
+        // 随机选择跑道 0=上, 1=中, 2=下
+        const lane = Math.floor(Math.random() * 3);
+        circusRings.push(new FireRing(ringX, lane, true));
         ringX += ringSpacing + Math.random() * 200;
     }
 }
@@ -3131,16 +3173,42 @@ function drawCircus() {
         ctx.fill();
     }
 
-    // 绘制地面
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(0, 460, w, 140);
+    // 绘制3条跑道
+    const laneColors = ['#CD853F', '#D2691E', '#8B4513'];
+    CIRCUS_LANES.forEach((lane, index) => {
+        // 跑道背景
+        ctx.fillStyle = laneColors[index];
+        ctx.fillRect(0, lane.y - 40, w, 80);
 
-    // 地面纹理
-    ctx.fillStyle = '#A0522D';
-    for (let i = 0; i < w / 50 + 1; i++) {
-        const x = (i * 50 - circusDistance) % (w + 50);
-        ctx.fillRect(x, 460, 25, 140);
+        // 跑道边框线
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath();
+        ctx.moveTo(0, lane.y - 40);
+        ctx.lineTo(w, lane.y - 40);
+        ctx.moveTo(0, lane.y + 40);
+        ctx.lineTo(w, lane.y + 40);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    });
+
+    // 跑道分隔虚线
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([20, 20]);
+    for (let i = 0; i < w / 40 + 1; i++) {
+        const x = (i * 40 - circusDistance * 2) % (w + 40);
+        ctx.beginPath();
+        ctx.moveTo(x, CIRCUS_LANES[0].y);
+        ctx.lineTo(x + 20, CIRCUS_LANES[0].y);
+        ctx.moveTo(x, CIRCUS_LANES[1].y);
+        ctx.lineTo(x + 20, CIRCUS_LANES[1].y);
+        ctx.moveTo(x, CIRCUS_LANES[2].y);
+        ctx.lineTo(x + 20, CIRCUS_LANES[2].y);
+        ctx.stroke();
     }
+    ctx.setLineDash([]);
 
     // 绘制进度条背景
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -3190,9 +3258,11 @@ function drawCircus() {
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
-    ctx.fillText('🔥 跳起来从火圈中间穿过去！🔥', w / 2, h - 35);
+    ctx.fillText('🔥 跳起来从火圈中间穿过去！🔥', w / 2, h - 55);
     ctx.font = '14px Arial';
-    ctx.fillText('点击屏幕或按空格键跳跃', w / 2, h - 15);
+    ctx.fillText('↑↓ 或 WS 切换跑道 | 空格或点击跳跃', w / 2, h - 35);
+    ctx.font = '12px Arial';
+    ctx.fillText('当前跑道: ' + CIRCUS_LANES[circusPlayer.lane].label, w / 2, h - 15);
     ctx.shadowBlur = 0;
 }
 
@@ -3658,6 +3728,17 @@ document.addEventListener('keydown', e => {
         fireBullet();
     }
     if (e.code === 'Escape') { if (state === 'play') pauseGame(); else if (state === 'pause') resumeGame(); }
+    // 马戏团模式跑道切换
+    if (gameMode === 'circus' && state === 'play' && circusPlayer) {
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+            e.preventDefault();
+            circusPlayer.changeLane(-1); // 切换到上跑道
+        }
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+            e.preventDefault();
+            circusPlayer.changeLane(1); // 切换到下跑道
+        }
+    }
 });
 document.addEventListener('keyup', e => keys[e.code] = false);
 
@@ -3686,9 +3767,20 @@ cvs.addEventListener('click', e => {
         const y = (e.clientY - rect.top) * (cvs.height / rect.height);
         elimClick(x, y);
     }
-    // 马戏团模式点击跳跃
+    // 马戏团模式点击控制
     if (gameMode === 'circus' && state === 'play' && circusPlayer) {
-        circusPlayer.jump();
+        const rect = cvs.getBoundingClientRect();
+        const y = (e.clientY - rect.top) * (cvs.height / rect.height);
+        const cvsHeight = cvs.height;
+
+        // 点击上半部分切换到上跑道，下半部分切换到下跑道，中间跳跃
+        if (y < cvsHeight * 0.35) {
+            circusPlayer.changeLane(-1);
+        } else if (y > cvsHeight * 0.65) {
+            circusPlayer.changeLane(1);
+        } else {
+            circusPlayer.jump();
+        }
     }
 });
 
