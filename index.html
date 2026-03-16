@@ -2931,15 +2931,16 @@ function initCircus() {
     currentLane = 1; // 重置到中间跑道
 
     // 生成火圈 - 随机出现在3条跑道之一
-    let ringX = 800;
-    const ringSpacing = 600;
-    const totalRings = Math.floor(circusTargetDistance / ringSpacing);
+    // 火圈应该均匀分布在整个赛道上
+    const totalRings = 20; // 固定20个火圈
+    const spacing = circusTargetDistance / totalRings; // 均匀间距
 
     for (let i = 0; i < totalRings; i++) {
+        // 火圈分布在赛道上，起始位置为 500 + i * spacing，加上一些随机偏移
+        const ringX = 500 + i * spacing + Math.random() * 200;
         // 随机选择跑道 0=上, 1=中, 2=下
         const lane = Math.floor(Math.random() * 3);
         circusRings.push(new FireRing(ringX, lane, true));
-        ringX += ringSpacing + Math.random() * 200;
     }
 }
 
