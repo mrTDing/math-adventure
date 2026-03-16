@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>数学小恶魔</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #667eea; font-family: sans-serif; }
+        #game { position: relative; }
+        canvas { background: #87CEEB; border-radius: 10px; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 16px; text-shadow: 1px 1px 2px black; }
+        #panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; text-align: center; display: none; }
+        #qtext { font-size: 28px; margin-bottom: 15px; }
+        .ans { width: 60px; height: 50px; margin: 5px; font-size: 20px; border: none; border-radius: 10px; background: #f5576c; color: white; cursor: pointer; }
+        .ans:hover { transform: scale(1.1); }
+        #start, #over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        #over { display: none; }
+        h1 { font-size: 36px; margin-bottom: 20px; }
+        button { padding: 12px 30px; font-size: 20px; border: none; border-radius: 20px; background: #fa709a; color: white; cursor: pointer; }
+        #tips { margin-top: 15px; font-size: 14px; text-align: center; }
+
+        /* 手机触控 */
+        #touch { position: absolute; bottom: 15px; left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 15px; }
+        .tbtn { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid white; display: flex; justify-content: center; align-items: center; font-size: 24px; }
+        .tbtn:active { background: rgba(255,255,255,0.5); }
+        @media (max-width: 768px) {
+            body { background: #87CEEB; }
+            canvas { width: 100vw; height: 100vh; border-radius: 0; }
+            h1 { font-size: 28px; }
+            #touch { display: flex; }
+            #tips { font-size: 12px; padding: 0 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <canvas id="cvs" width="800" height="500"></canvas>
+        <div id="ui">关卡: <span id="lvl">1</span> | 得分: <span id="score">0</span> | 糖果: <span id="candy">0</span></div>
+        <div id="panel">
+            <div id="qtext"></div>
+            <div id="btns"></div>
+        </div>
+        <div id="start">
+            <h1>🎮 数学小恶魔</h1>
+            <p style="margin-bottom: 20px;">边玩边学数学！</p>
+            <button onclick="start()">开始游戏</button>
+            <div id="tips">
+                <p>⬅️➡️ 移动 | 空格/⬆️ 跳跃(可二段跳)</p>
+                <p>顶问号答题，吃糖果，到旗帜过关！</p>
+            </div>
+        </div>
+        <div id="over">
+            <h1 id="endTitle">🎉 恭喜通关!</h1>
+            <p style="font-size: 20px; margin: 15px;">得分: <span id="final">0</span></p>
+            <button onclick="restart()">再玩一次</button>
+        </div>
+        <div id="touch">
+            <div style="display: flex; gap: 10px;">
+                <div class="tbtn" id="l">⬅️</div>
+                <div class="tbtn" id="r">➡️</div>
+            </div>
+            <div class="tbtn" id="j">⬆️</div>
+        </div>
+    </div>
+
+<script>
+const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d');
+let state = 'start', score = 0, candies = 0, keys = {}, level = 1;
+let player, blocks = [], coins = [], questions = [], flag, cam = 0;
+
+// 玩家
+class Player {
+    constructor() { this.x = 100; this.y = 300; this.vx = 0; this.vy = 0; this.r = 22; this.g = false; this.j = 0; }
+    jump() { if (this.j < 2) { this.vy = -12; this.j++; } }
+    update() {
+        this.vy += 0.5; this.x += this.vx; this.y += this.vy; this.g = false;
+        // 地面和平台
+        const platforms = [[0,450,800,50], [200,350,100,20], [400,280,100,20], [600,350,100,20]];
+        for (let p of platforms) {
+            if (this.x+this.r>p[0] && this.x-this.r<p[0]+p[2] && this.y+this.r>p[1] && this.y-this.r<p[1]+p[3]) {
+                if (this.vy > 0 && this.y-this.r < p[1]) { this.y = p[1]-this.r; this.vy = 0; this.g = true; this.j = 0; }
+            }
+        }
+        // 边界
+        const maxX = level === 1 ? 2500 : (level === 2 ? 3000 : 3500);
+        if (this.x < this.r) this.x = this.r;
+        if (this.x > maxX) this.x = maxX;
+        if (this.y > 600) restart();
+    }
+    draw() {
+        ctx.save(); ctx.translate(this.x-cam, this.y);
+        // 身体
+        const g = ctx.createRadialGradient(-5,-5,0,0,0,this.r);
+        g.addColorStop(0, '#F472B6'); g.addColorStop(1, '#EC4899'); ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+        // 角
+        ctx.fillStyle = '#8B5CF6';
+        ctx.beginPath(); ctx.moveTo(-12,-15); ctx.lineTo(-18,-30); ctx.lineTo(-6,-18); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(12,-15); ctx.lineTo(18,-30); ctx.lineTo(6,-18); ctx.fill();
+        ctx.restore();
+        // 脸
+        ctx.save(); ctx.translate(this.x-cam, this.y);
+        ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(-7,-3,6,0,Math.PI*2); ctx.arc(7,-3,6,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(-7,-3,3,0,Math.PI*2); ctx.arc(7,-3,3,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,8,4,0.2,Math.PI-0.2); ctx.stroke();
+        ctx.restore();
+    }
+}
+
+// 糖果
+class Coin {
+    constructor(x,y) { this.x=x; this.y=y; this.t=Math.random(); this.get=false; }
+    draw() {
+        if (this.get) return; this.t += 0.05;
+        ctx.save(); ctx.translate(this.x-cam, this.y+Math.sin(this.t)*3);
+        ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#B8860B'; ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.fillText('1',0,4);
+        ctx.restore();
+    }
+}
+
+// 问题方块
+class QBlock {
+    constructor(x,y,diff) { this.x=x; this.y=y; this.done=false; this.diff=diff; this.q=this.makeQ(); }
+    makeQ() {
+        let text, ans, type;
+        // 根据难度选择题目类型
+        if (this.diff === 1) { type = 'add_easy'; }
+        else if (this.diff === 2) { type = Math.random() > 0.5 ? 'add' : 'sub'; }
+        else { type = ['add','sub','compare'][Math.floor(Math.random()*3)]; }
+
+        if (type === 'add_easy') {
+            const a = Math.floor(Math.random()*5)+1, b = Math.floor(Math.random()*5)+1;
+            text = `${a} + ${b} = ?`; ans = a+b;
+        } else if (type === 'add') {
+            const a = Math.floor(Math.random()*10)+5, b = Math.floor(Math.random()*10)+1;
+            text = `${a} + ${b} = ?`; ans = a+b;
+        } else if (type === 'sub') {
+            const a = Math.floor(Math.random()*10)+10, b = Math.floor(Math.random()*a);
+            text = `${a} - ${b} = ?`; ans = a-b;
+        } else if (type === 'compare') {
+            const a = Math.floor(Math.random()*15)+1, b = Math.floor(Math.random()*15)+1;
+            text = `${a} ○ ${b}`; ans = a>b ? '>' : (a<b ? '<' : '=');
+            return {text, ans, opts: ['>','<','=']};
+        }
+        let opts = [ans];
+        while (opts.length < 3) { const w = ans + Math.floor(Math.random()*8)-4; if (w>=0 && w!==ans && !opts.includes(w)) opts.push(w); }
+        opts.sort(() => Math.random()-0.5);
+        return {text, ans, opts};
+    }
+    draw() {
+        ctx.save(); ctx.translate(this.x-cam, this.y);
+        ctx.fillStyle = this.done ? '#9CA3AF' : '#F59E0B';
+        ctx.fillRect(-20,-20,40,40); ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-20,-20,40,40);
+        ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'; ctx.fillText(this.done?'✓':'?',0,5);
+        ctx.restore();
+    }
+}
+
+function init() {
+    player = new Player(); cam = 0;
+    blocks = []; coins = []; questions = [];
+
+    if (level === 1) {
+        // 第1关：简单平台，10以内加法
+        blocks = [[0,450,2500,50], [150,380,80,20], [300,320,80,20], [500,380,80,20], [700,280,100,20], [900,350,80,20], [1150,300,80,20], [1400,380,80,20], [1700,320,100,20]];
+        [180,340,340,260,540,550,750,240,940,310,1200,260,1450,340,1750,280].forEach((v,i,arr) => { if(i%2===0) coins.push(new Coin(v,arr[i+1])); });
+        questions = [new QBlock(350,250,1), new QBlock(750,200,1), new QBlock(1200,220,1)];
+        flag = {x: 2000, y: 350};
+    } else if (level === 2) {
+        // 第2关：增加难度，20以内加减法
+        blocks = [[0,450,3000,50], [120,400,60,20], [250,340,80,20], [400,400,60,20], [550,280,100,20], [750,350,80,20], [950,250,80,20], [1150,380,80,20], [1350,300,100,20], [1600,380,80,20], [1850,320,100,20], [2100,260,100,20], [2400,350,80,20]];
+        [150,360,290,300,430,360,600,240,800,310,1000,210,1200,340,1400,260,1650,340,1900,280,2150,220,2450,310].forEach((v,i,arr) => { if(i%2===0) coins.push(new Coin(v,arr[i+1])); });
+        questions = [new QBlock(600,200,2), new QBlock(1000,170,2), new QBlock(1400,220,2), new QBlock(2200,190,2)];
+        flag = {x: 2600, y: 280};
+    } else {
+        // 第3关：最难，混合运算+比大小
+        blocks = [[0,450,3500,50], [100,380,60,20], [220,320,60,20], [350,400,60,20], [480,340,80,20], [650,280,80,20], [800,400,60,20], [950,320,100,20], [1150,260,80,20], [1350,380,80,20], [1550,300,100,20], [1800,400,80,20], [2050,320,100,20], [2300,250,100,20], [2550,380,80,20], [2800,300,100,20], [3100,350,80,20]];
+        [130,350,250,290,380,370,520,310,700,250,830,370,1000,290,1200,230,1400,350,1600,270,1850,370,2100,290,2350,220,2600,350,2850,270,3150,320].forEach((v,i,arr) => { if(i%2===0) coins.push(new Coin(v,arr[i+1])); });
+        questions = [new QBlock(520,250,3), new QBlock(1000,210,3), new QBlock(1600,240,3), new QBlock(2100,250,3), new QBlock(2850,230,3)];
+        flag = {x: 3300, y: 280};
+    }
+}
+
+function update() {
+    if (state !== 'play') return;
+    // 移动
+    if (keys['ArrowLeft']) player.vx = -4;
+    else if (keys['ArrowRight']) player.vx = 4;
+    else player.vx *= 0.8;
+    player.update();
+    // 相机
+    const maxCam = level === 1 ? 1700 : (level === 2 ? 2200 : 2600);
+    cam = Math.max(0, Math.min(player.x-200, maxCam));
+    // 吃糖果
+    for (let c of coins) {
+        if (!c.get && Math.hypot(player.x-c.x, player.y-c.y) < 30) {
+            c.get = true; candies++; score += 10; updateUI();
+        }
+    }
+    // 答题
+    for (let q of questions) {
+        if (!q.done && Math.hypot(player.x-q.x, player.y-q.y) < 40) showQ(q);
+    }
+    // 过关
+    if (Math.abs(player.x-flag.x) < 40 && Math.abs(player.y-flag.y) < 60) win();
+}
+
+function showQ(block) {
+    state = 'q';
+    document.getElementById('qtext').textContent = block.q.text;
+    const btns = document.getElementById('btns'); btns.innerHTML = '';
+    block.q.opts.forEach(opt => {
+        const b = document.createElement('button'); b.className = 'ans'; b.textContent = opt;
+        b.onclick = () => answer(block, opt);
+        btns.appendChild(b);
+    });
+    document.getElementById('panel').style.display = 'block';
+}
+
+function answer(block, sel) {
+    if (sel === block.q.ans) {
+        block.done = true; score += 50; candies += 2; updateUI();
+    }
+    document.getElementById('panel').style.display = 'none';
+    state = 'play';
+}
+
+function draw() {
+    ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,cvs.width,cvs.height);
+    // 云
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for (let [x,y,r] of [[100,80,30],[300,120,40],[500,60,25],[700,100,35]]) {
+        ctx.beginPath(); ctx.arc(x-cam*0.3,y,r,0,Math.PI*2); ctx.fill();
+    }
+    // 地面
+    const groundLen = level === 1 ? 2500 : (level === 2 ? 3000 : 3500);
+    ctx.fillStyle = '#4ADE80'; ctx.fillRect(0-cam,450,groundLen,10);
+    ctx.fillStyle = '#D97706'; ctx.fillRect(0-cam,460,groundLen,90);
+    // 平台
+    ctx.fillStyle = '#8B5CF6';
+    for (let b of blocks.slice(1)) ctx.fillRect(b[0]-cam,b[1],b[2],b[3]);
+    // 糖果
+    for (let c of coins) c.draw();
+    // 问题
+    for (let q of questions) q.draw();
+    // 旗帜
+    ctx.fillStyle = '#8B4513'; ctx.fillRect(flag.x-cam,flag.y,8,100);
+    ctx.fillStyle = '#FF6B6B'; ctx.beginPath(); ctx.moveTo(flag.x-cam+8,flag.y); ctx.lineTo(flag.x-cam+50,flag.y+20); ctx.lineTo(flag.x-cam+8,flag.y+40); ctx.fill();
+    // 玩家
+    player.draw();
+}
+
+function loop() {
+    if (state === 'play' || state === 'q') { update(); draw(); }
+    requestAnimationFrame(loop);
+}
+
+function start() {
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('over').style.display = 'none';
+    state = 'play'; init(); loop();
+}
+
+function restart() {
+    document.getElementById('over').style.display = 'none';
+    level = 1; score = 0; candies = 0;
+    start();
+}
+
+function win() {
+    if (level < 3) {
+        level++;
+        score += 100; // 过关奖励
+        init(); // 加载下一关
+    } else {
+        state = 'over';
+        document.getElementById('endTitle').textContent = '🏆 全部通关!';
+        document.getElementById('final').textContent = score;
+        document.getElementById('over').style.display = 'flex';
+    }
+}
+
+function updateUI() {
+    document.getElementById('lvl').textContent = level;
+    document.getElementById('score').textContent = score;
+    document.getElementById('candy').textContent = candies;
+}
+
+// 键盘
+document.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space') { e.preventDefault(); if (state === 'play') player.jump(); }
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+// 触控
+function touch(id, key, jump) {
+    const btn = document.getElementById(id);
+    btn.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; if (jump && state === 'play') player.jump(); });
+    btn.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; });
+}
+touch('l', 'ArrowLeft', false);
+touch('r', 'ArrowRight', false);
+touch('j', 'Space', true);
+
+// 自适应
+if (window.innerWidth <= 768) {
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
+}
+</script>
+</body>
+</html>

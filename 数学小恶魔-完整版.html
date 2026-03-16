@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>数学小恶魔</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-family: 'Microsoft YaHei', sans-serif; }
+        #game { position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border-radius: 20px; overflow: hidden; }
+        canvas { display: block; background: #87CEEB; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 16px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        #ui span { margin-right: 15px; }
+        #panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); padding: 30px; border-radius: 20px; text-align: center; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #qtext { font-size: 32px; color: #333; margin-bottom: 20px; }
+        .ans { width: 70px; height: 55px; margin: 8px; font-size: 24px; border: none; border-radius: 12px; cursor: pointer; background: linear-gradient(145deg, #f093fb 0%, #f5576c 100%); color: white; transition: transform 0.2s; }
+        .ans:hover { transform: scale(1.1); }
+        #start, #over, #customize, #vehicleSelect { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; overflow-y: auto; }
+        #over, #customize, #vehicleSelect { display: none; }
+        h1 { font-size: 36px; margin-bottom: 15px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); }
+        h2 { font-size: 24px; margin-bottom: 15px; color: #FCD34D; }
+        button { padding: 12px 30px; font-size: 20px; border: none; border-radius: 25px; cursor: pointer; background: linear-gradient(145deg, #fa709a 0%, #fee140 100%); color: white; margin: 8px; transition: transform 0.2s; }
+        button:hover { transform: scale(1.05); }
+        .btn-small { padding: 8px 20px; font-size: 16px; }
+        #tips { margin-top: 15px; text-align: center; font-size: 14px; line-height: 1.8; }
+
+        /* 角色自定义界面 */
+        .custom-container { display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 20px; }
+        .preview-box { width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 20px; display: flex; justify-content: center; align-items: center; border: 3px solid rgba(255,255,255,0.3); }
+        .options-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 5px 0; }
+        .option-btn { padding: 8px 15px; font-size: 14px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4); border-radius: 15px; color: white; cursor: pointer; transition: all 0.2s; }
+        .option-btn:hover, .option-btn.active { background: rgba(236, 72, 153, 0.6); border-color: #EC4899; transform: scale(1.05); }
+        .label { font-size: 14px; color: #FCD34D; margin-top: 5px; }
+
+        /* 载具选择 */
+        .vehicle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; }
+        .vehicle-card { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 15px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .vehicle-card:hover, .vehicle-card.selected { background: rgba(236, 72, 153, 0.4); border-color: #EC4899; transform: scale(1.05); }
+        .vehicle-icon { font-size: 48px; margin-bottom: 8px; }
+        .vehicle-name { font-size: 14px; color: white; }
+
+        /* 变身效果提示 */
+        #transformHint { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font-size: 36px; font-weight: bold; color: #8B0000; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); display: none; animation: shake 0.5s ease-in-out; pointer-events: none; }
+        @keyframes shake { 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); } 25% { transform: translate(-50%, -50%) rotate(-5deg); } 75% { transform: translate(-50%, -50%) rotate(5deg); } }
+
+        /* 手机触控 */
+        #touch { position: absolute; bottom: 15px; left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 15px; pointer-events: none; }
+        .tbtn { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.3); border: 3px solid rgba(255,255,255,0.6); display: flex; justify-content: center; align-items: center; font-size: 24px; pointer-events: auto; user-select: none; touch-action: none; }
+        .tbtn:active { background: rgba(255,255,255,0.5); transform: scale(0.95); }
+        @media (max-width: 768px) {
+            body { background: #87CEEB; }
+            #game { border-radius: 0; box-shadow: none; }
+            canvas { width: 100vw; height: 100vh; border-radius: 0; }
+            h1 { font-size: 28px; }
+            h2 { font-size: 20px; }
+            #touch { display: flex; }
+            #panel { width: 90%; padding: 20px; }
+            #qtext { font-size: 24px; }
+            .ans { width: 60px; height: 50px; font-size: 20px; margin: 5px; }
+            .vehicle-grid { grid-template-columns: repeat(2, 1fr); }
+            .custom-container { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <canvas id="cvs" width="900" height="600"></canvas>
+        <div id="ui">
+            <span>🎮 关卡: <span id="lvl">1</span></span>
+            <span>⭐ 得分: <span id="score">0</span></span>
+            <span>🍬 糖果: <span id="candy">0</span></span>
+            <span id="vehicleIcon" style="display:none;"></span>
+        </div>
+        <div id="panel">
+            <div id="qtext"></div>
+            <div id="btns"></div>
+        </div>
+        <div id="transformHint">😈 变身坏蛋!</div>
+
+        <!-- 开始界面 -->
+        <div id="start">
+            <h1>🎮 数学小恶魔</h1>
+            <p style="margin-bottom: 20px; font-size: 18px;">装扮你的角色，选择载具，开始数学冒险！</p>
+            <button onclick="showCustomize()">🎨 开始装扮</button>
+            <div id="tips">
+                <p>⬅️➡️ 移动 | 空格/⬆️ 跳跃(可二段跳)</p>
+                <p>顶问号答题，吃糖果，到旗帜过关！</p>
+                <p>❌ 答错题目会变成坏蛋哦！</p>
+            </div>
+        </div>
+
+        <!-- 角色自定义界面 -->
+        <div id="customize">
+            <h2>🎨 装扮你的小恶魔</h2>
+            <div class="custom-container">
+                <div class="preview-box">
+                    <canvas id="previewCanvas" width="150" height="150"></canvas>
+                </div>
+
+                <div class="label">😊 脸型</div>
+                <div class="options-row">
+                    <div class="option-btn active" onclick="setFace('round', this)">圆形</div>
+                    <div class="option-btn" onclick="setFace('square', this)">方形</div>
+                    <div class="option-btn" onclick="setFace('oval', this)">椭圆</div>
+                </div>
+
+                <div class="label">👀 眼睛</div>
+                <div class="options-row">
+                    <div class="option-btn active" onclick="setEyes('normal', this)">普通</div>
+                    <div class="option-btn" onclick="setEyes('big', this)">大眼</div>
+                    <div class="option-btn" onclick="setEyes('wink', this)">眨眼</div>
+                    <div class="option-btn" onclick="setEyes('star', this)">星星眼</div>
+                </div>
+
+                <div class="label">💇 发型</div>
+                <div class="options-row">
+                    <div class="option-btn active" onclick="setHair('horns', this)">恶魔角</div>
+                    <div class="option-btn" onclick="setHair('bow', this)">蝴蝶结</div>
+                    <div class="option-btn" onclick="setHair('hat', this)">小帽子</div>
+                    <div class="option-btn" onclick="setHair('crown', this)">皇冠</div>
+                </div>
+
+                <div class="label">🎀 配饰</div>
+                <div class="options-row">
+                    <div class="option-btn active" onclick="setAccessory('none', this)">无</div>
+                    <div class="option-btn" onclick="setAccessory('glasses', this)">眼镜</div>
+                    <div class="option-btn" onclick="setAccessory('scarf', this)">围巾</div>
+                    <div class="option-btn" onclick="setAccessory('wings', this)">翅膀</div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <button onclick="showVehicleSelect()">🏍️ 选择载具 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 载具选择界面 -->
+        <div id="vehicleSelect">
+            <h2>🏍️ 选择你的载具</h2>
+            <div class="vehicle-grid">
+                <div class="vehicle-card selected" onclick="selectVehicle('none', this)">
+                    <div class="vehicle-icon">🏃</div>
+                    <div class="vehicle-name">跑步</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('motorcycle', this)">
+                    <div class="vehicle-icon">🏍️</div>
+                    <div class="vehicle-name">摩托车</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('sports', this)">
+                    <div class="vehicle-icon">🏎️</div>
+                    <div class="vehicle-name">跑车</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('horse', this)">
+                    <div class="vehicle-icon">🐴</div>
+                    <div class="vehicle-name">小马</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('skateboard', this)">
+                    <div class="vehicle-icon">🛹</div>
+                    <div class="vehicle-name">滑板</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('rocket', this)">
+                    <div class="vehicle-icon">🚀</div>
+                    <div class="vehicle-name">小火箭</div>
+                </div>
+            </div>
+            <button onclick="startGame()">🎮 开始游戏</button>
+            <button class="btn-small" onclick="backToCustomize()">← 返回装扮</button>
+        </div>
+
+        <!-- 游戏结束界面 -->
+        <div id="over">
+            <h1 id="endTitle">🏆 恭喜通关!</h1>
+            <p style="font-size: 22px; margin: 15px;">最终得分: <span id="final">0</span></p>
+            <p style="font-size: 16px; margin: 10px; color: #FCD34D;">收集糖果: <span id="finalCandy">0</span></p>
+            <div style="margin-top: 20px;">
+                <button onclick="restart()">🔄 再玩一次</button>
+                <button class="btn-small" onclick="backToCustomizeFromGame()">🎨 重新装扮</button>
+            </div>
+        </div>
+
+        <div id="touch">
+            <div style="display: flex; gap: 10px;">
+                <div class="tbtn" id="l">⬅️</div>
+                <div class="tbtn" id="r">➡️</div>
+            </div>
+            <div class="tbtn" id="j">⬆️</div>
+        </div>
+    </div>
+
+<script>
+const cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d');
+const previewCvs = document.getElementById('previewCanvas'), previewCtx = previewCvs.getContext('2d');
+let state = 'start', score = 0, candies = 0, level = 1, keys = {};
+let player, blocks = [], coins = [], questions = [], flag, cam = 0;
+
+// 角色自定义配置
+let playerConfig = {
+    face: 'round',
+    eyes: 'normal',
+    hair: 'horns',
+    accessory: 'none',
+    vehicle: 'none'
+};
+
+// 变身状态
+let isVillain = false;
+let villainTime = 0;
+
+// 玩家类
+class Player {
+    constructor() {
+        this.x = 100; this.y = 300; this.vx = 0; this.vy = 0;
+        this.r = 22; this.g = false; this.j = 0;
+        this.speed = playerConfig.vehicle === 'sports' ? 6 : (playerConfig.vehicle === 'motorcycle' ? 5.5 : 4);
+        this.jumpPower = playerConfig.vehicle === 'rocket' ? -14 : -12;
+    }
+
+    jump() {
+        if (this.j < 2) {
+            this.vy = this.jumpPower;
+            this.j++;
+            // 火箭载具可以飞更高
+            if (playerConfig.vehicle === 'rocket' && this.j === 2) {
+                this.vy = -10;
+            }
+        }
+    }
+
+    update() {
+        this.vy += 0.5; this.x += this.vx; this.y += this.vy; this.g = false;
+
+        // 地面和平台碰撞
+        for (let b of blocks) {
+            if (this.x+this.r>b[0] && this.x-this.r<b[0]+b[2] && this.y+this.r>b[1] && this.y-this.r<b[1]+b[3]) {
+                if (this.vy > 0 && this.y-this.r < b[1]) {
+                    this.y = b[1]-this.r; this.vy = 0; this.g = true; this.j = 0;
+                }
+            }
+        }
+
+        // 边界
+        const maxX = level === 1 ? 2500 : (level === 2 ? 3000 : 3500);
+        if (this.x < this.r) this.x = this.r;
+        if (this.x > maxX) this.x = maxX;
+        if (this.y > 600) restart();
+
+        // 变身状态计时
+        if (isVillain) {
+            villainTime--;
+            if (villainTime <= 0) isVillain = false;
+        }
+    }
+
+    draw() {
+        const x = this.x - cam, y = this.y;
+
+        // 绘制载具（在角色下方）
+        this.drawVehicle(x, y);
+
+        // 绘制角色主体
+        if (isVillain) {
+            this.drawVillain(x, y);
+        } else {
+            this.drawNormal(x, y);
+        }
+
+        // 绘制配饰
+        this.drawAccessory(x, y);
+    }
+
+    drawVehicle(x, y) {
+        switch(playerConfig.vehicle) {
+            case 'motorcycle':
+                // 摩托车
+                ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(x-15, y+20, 12, 0, Math.PI*2); ctx.arc(x+15, y+20, 12, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#E74C3C'; ctx.fillRect(x-20, y+5, 40, 10);
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x-10, y+5); ctx.lineTo(x-5, y-5); ctx.lineTo(x+10, y+5); ctx.stroke();
+                break;
+            case 'sports':
+                // 跑车
+                ctx.fillStyle = '#E74C3C'; ctx.beginPath(); ctx.moveTo(x-25, y+15); ctx.lineTo(x+25, y+15); ctx.lineTo(x+20, y-5); ctx.lineTo(x-15, y-5); ctx.fill();
+                ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(x-15, y+20, 10, 0, Math.PI*2); ctx.arc(x+15, y+20, 10, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#87CEEB'; ctx.fillRect(x-10, y-2, 15, 8);
+                break;
+            case 'horse':
+                // 小马
+                ctx.fillStyle = '#8B4513'; ctx.fillRect(x-20, y+10, 40, 15); ctx.fillRect(x-15, y-5, 10, 20); ctx.fillRect(x+5, y-5, 10, 20);
+                ctx.beginPath(); ctx.arc(x-20, y+25, 6, 0, Math.PI*2); ctx.arc(x-20, y+5, 6, 0, Math.PI*2); ctx.arc(x+20, y+25, 6, 0, Math.PI*2); ctx.arc(x+20, y+5, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#D2691E'; ctx.beginPath(); ctx.arc(x+25, y-5, 12, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(x+28, y-8, 3, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(x+30, y-8, 1.5, 0, Math.PI*2); ctx.fill();
+                break;
+            case 'skateboard':
+                // 滑板
+                ctx.fillStyle = '#E74C3C'; ctx.fillRect(x-20, y+22, 40, 6); ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(x-12, y+28, 5, 0, Math.PI*2); ctx.arc(x+12, y+28, 5, 0, Math.PI*2); ctx.fill();
+                break;
+            case 'rocket':
+                // 火箭
+                ctx.fillStyle = '#E74C3C'; ctx.beginPath(); ctx.moveTo(x, y-30); ctx.lineTo(x-12, y+15); ctx.lineTo(x+12, y+15); ctx.fill();
+                ctx.fillStyle = '#F39C12'; ctx.beginPath(); ctx.moveTo(x-8, y+15); ctx.lineTo(x, y+35); ctx.lineTo(x+8, y+15); ctx.fill();
+                ctx.fillStyle = '#87CEEB'; ctx.beginPath(); ctx.arc(x, y-5, 8, 0, Math.PI*2); ctx.fill();
+                if (this.vy < 0) {
+                    ctx.fillStyle = '#F39C12'; ctx.beginPath(); ctx.moveTo(x-6, y+35); ctx.lineTo(x, y+50+Math.random()*10); ctx.lineTo(x+6, y+35); ctx.fill();
+                }
+                break;
+        }
+    }
+
+    drawNormal(x, y) {
+        const offsetY = playerConfig.vehicle === 'none' ? 0 : (playerConfig.vehicle === 'horse' ? -10 : -8);
+        y += offsetY;
+
+        // 脸型
+        const g = ctx.createRadialGradient(x-5, y-5, 0, x, y, this.r);
+        if (isVillain) {
+            g.addColorStop(0, '#8B4513'); g.addColorStop(1, '#5D3A1A');
+        } else {
+            g.addColorStop(0, '#F472B6'); g.addColorStop(1, '#EC4899');
+        }
+        ctx.fillStyle = g;
+
+        ctx.beginPath();
+        if (playerConfig.face === 'round') {
+            ctx.arc(x, y, this.r, 0, Math.PI*2);
+        } else if (playerConfig.face === 'square') {
+            ctx.roundRect(x-this.r, y-this.r, this.r*2, this.r*2, 8);
+        } else {
+            ctx.ellipse(x, y, this.r, this.r*1.2, 0, 0, Math.PI*2);
+        }
+        ctx.fill();
+
+        // 头发/装饰
+        this.drawHair(x, y);
+
+        // 眼睛
+        this.drawEyes(x, y);
+
+        // 嘴巴
+        ctx.strokeStyle = isVillain ? '#FFF' : '#333'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (isVillain) {
+            ctx.arc(x, y+8, 6, 0.8, Math.PI-0.8, true);
+        } else if (playerConfig.eyes === 'wink') {
+            ctx.arc(x, y+8, 4, 0.2, Math.PI-0.2);
+        } else {
+            ctx.arc(x, y+8, 4, 0.2, Math.PI-0.2);
+        }
+        ctx.stroke();
+
+        // 坏蛋特殊效果
+        if (isVillain) {
+            ctx.fillStyle = 'rgba(255,0,0,0.3)'; ctx.beginPath(); ctx.arc(x-12, y+5, 6, 0, Math.PI*2); ctx.arc(x+12, y+5, 6, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    drawVillain(x, y) {
+        // 坏蛋形态 - 更暗的颜色，尖牙，愤怒眉毛
+        this.drawNormal(x, y);
+
+        // 添加尖牙
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.moveTo(x-5, y+12); ctx.lineTo(x-2, y+18); ctx.lineTo(x+1, y+12); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x+2, y+12); ctx.lineTo(x+5, y+18); ctx.lineTo(x+8, y+12); ctx.fill();
+    }
+
+    drawHair(x, y) {
+        const offsetY = -this.r + 5;
+        switch(playerConfig.hair) {
+            case 'horns':
+                ctx.fillStyle = isVillain ? '#333' : '#8B5CF6';
+                ctx.beginPath(); ctx.moveTo(x-12, y+offsetY); ctx.lineTo(x-18, y-25); ctx.lineTo(x-6, y+offsetY+3); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(x+12, y+offsetY); ctx.lineTo(x+18, y-25); ctx.lineTo(x+6, y+offsetY+3); ctx.fill();
+                break;
+            case 'bow':
+                ctx.fillStyle = '#FF69B4'; ctx.beginPath(); ctx.arc(x-10, y+offsetY, 8, 0, Math.PI*2); ctx.arc(x+10, y+offsetY, 8, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#FF1493'; ctx.fillRect(x-3, y+offsetY-5, 6, 10);
+                break;
+            case 'hat':
+                ctx.fillStyle = '#333'; ctx.fillRect(x-15, y+offsetY, 30, 5); ctx.fillRect(x-10, y-20, 20, 15);
+                ctx.fillStyle = '#E74C3C'; ctx.fillRect(x-10, y-15, 20, 3);
+                break;
+            case 'crown':
+                ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.moveTo(x-15, y+offsetY); ctx.lineTo(x-12, y-20); ctx.lineTo(x-6, y+offsetY-5); ctx.lineTo(x, y-22); ctx.lineTo(x+6, y+offsetY-5); ctx.lineTo(x+12, y-20); ctx.lineTo(x+15, y+offsetY); ctx.fill();
+                break;
+        }
+    }
+
+    drawEyes(x, y) {
+        const eyeY = y - 3;
+        ctx.fillStyle = 'white';
+        if (playerConfig.eyes === 'big') {
+            ctx.beginPath(); ctx.arc(x-10, eyeY, 10, 0, Math.PI*2); ctx.arc(x+10, eyeY, 10, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = isVillain ? 'red' : '#333'; ctx.beginPath(); ctx.arc(x-10, eyeY, 5, 0, Math.PI*2); ctx.arc(x+10, eyeY, 5, 0, Math.PI*2); ctx.fill();
+        } else if (playerConfig.eyes === 'wink') {
+            ctx.beginPath(); ctx.arc(x-8, eyeY, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = isVillain ? 'red' : '#333'; ctx.beginPath(); ctx.arc(x-8, eyeY, 3, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x+3, eyeY-2); ctx.lineTo(x+13, eyeY-2); ctx.stroke();
+        } else if (playerConfig.eyes === 'star') {
+            ctx.beginPath(); ctx.arc(x-8, eyeY, 7, 0, Math.PI*2); ctx.arc(x+8, eyeY, 7, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#FFD700'; this.drawStar(x-8, eyeY, 5, 3); this.drawStar(x+8, eyeY, 5, 3);
+        } else {
+            ctx.beginPath(); ctx.arc(x-8, eyeY, 6, 0, Math.PI*2); ctx.arc(x+8, eyeY, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = isVillain ? 'red' : '#333'; ctx.beginPath(); ctx.arc(x-8, eyeY, 3, 0, Math.PI*2); ctx.arc(x+8, eyeY, 3, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    drawStar(cx, cy, spikes, outerRadius) {
+        let rot = Math.PI/2*3, x = cx, y = cy, step = Math.PI/spikes;
+        ctx.beginPath(); ctx.moveTo(cx, cy-outerRadius);
+        for (let i = 0; i < spikes; i++) {
+            x = cx + Math.cos(rot) * outerRadius; y = cy + Math.sin(rot) * outerRadius;
+            ctx.lineTo(x, y); rot += step;
+            x = cx + Math.cos(rot) * (outerRadius/2); y = cy + Math.sin(rot) * (outerRadius/2);
+            ctx.lineTo(x, y); rot += step;
+        }
+        ctx.lineTo(cx, cy-outerRadius); ctx.closePath(); ctx.fill();
+    }
+
+    drawAccessory(x, y) {
+        switch(playerConfig.accessory) {
+            case 'glasses':
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x-8, y-3, 8, 0, Math.PI*2); ctx.arc(x+8, y-3, 8, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x, y-3); ctx.lineTo(x, y-3); ctx.stroke();
+                break;
+            case 'scarf':
+                ctx.fillStyle = '#E74C3C'; ctx.fillRect(x-15, y+15, 30, 8);
+                ctx.fillRect(x+10, y+18, 8, 15);
+                break;
+            case 'wings':
+                ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.ellipse(x-20, y, 12, 8, -0.3, 0, Math.PI*2); ctx.ellipse(x+20, y, 12, 8, 0.3, 0, Math.PI*2); ctx.fill();
+                break;
+        }
+    }
+}
+
+// 糖果类
+class Coin {
+    constructor(x, y) { this.x = x; this.y = y; this.t = Math.random(); this.get = false; }
+    draw() {
+        if (this.get) return; this.t += 0.05;
+        ctx.save(); ctx.translate(this.x - cam, this.y + Math.sin(this.t) * 3);
+        ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#B8860B'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText('1', 0, 4);
+        ctx.restore();
+    }
+}
+
+// 问题方块
+class QBlock {
+    constructor(x, y, diff) { this.x = x; this.y = y; this.done = false; this.diff = diff; this.q = this.makeQ(); }
+    makeQ() {
+        let text, ans, type;
+        if (this.diff === 1) { type = 'add_easy'; }
+        else if (this.diff === 2) { type = Math.random() > 0.5 ? 'add' : 'sub'; }
+        else { type = ['add', 'sub', 'compare'][Math.floor(Math.random() * 3)]; }
+
+        if (type === 'add_easy') { const a = Math.floor(Math.random() * 5) + 1, b = Math.floor(Math.random() * 5) + 1; text = `${a} + ${b} = ?`; ans = a + b; }
+        else if (type === 'add') { const a = Math.floor(Math.random() * 10) + 5, b = Math.floor(Math.random() * 10) + 1; text = `${a} + ${b} = ?`; ans = a + b; }
+        else if (type === 'sub') { const a = Math.floor(Math.random() * 10) + 10, b = Math.floor(Math.random() * a); text = `${a} - ${b} = ?`; ans = a - b; }
+        else if (type === 'compare') { const a = Math.floor(Math.random() * 15) + 1, b = Math.floor(Math.random() * 15) + 1; text = `${a} ○ ${b}`; ans = a > b ? '>' : (a < b ? '<' : '='); return { text, ans, opts: ['>', '<', '='] }; }
+
+        let opts = [ans];
+        while (opts.length < 3) { const w = ans + Math.floor(Math.random() * 8) - 4; if (w >= 0 && w !== ans && !opts.includes(w)) opts.push(w); }
+        opts.sort(() => Math.random() - 0.5); return { text, ans, opts };
+    }
+    draw() {
+        ctx.save(); ctx.translate(this.x - cam, this.y);
+        ctx.fillStyle = this.done ? '#9CA3AF' : '#F59E0B'; ctx.fillRect(-20, -20, 40, 40); ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+        ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'; ctx.fillText(this.done ? '✓' : '?', 0, 5);
+        ctx.restore();
+    }
+}
+
+// 界面函数
+function showCustomize() {
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('customize').style.display = 'flex';
+    updatePreview();
+}
+
+function backToCustomize() {
+    document.getElementById('vehicleSelect').style.display = 'none';
+    document.getElementById('customize').style.display = 'flex';
+}
+
+function backToCustomizeFromGame() {
+    document.getElementById('over').style.display = 'none';
+    showCustomize();
+}
+
+function showVehicleSelect() {
+    document.getElementById('customize').style.display = 'none';
+    document.getElementById('vehicleSelect').style.display = 'flex';
+}
+
+function startGame() {
+    document.getElementById('vehicleSelect').style.display = 'none';
+    state = 'play';
+    score = 0; candies = 0; level = 1; isVillain = false;
+    document.getElementById('vehicleIcon').textContent = getVehicleEmoji();
+    document.getElementById('vehicleIcon').style.display = 'inline';
+    init(); loop();
+}
+
+function getVehicleEmoji() {
+    const map = { none: '🏃', motorcycle: '🏍️', sports: '🏎️', horse: '🐴', skateboard: '🛹', rocket: '🚀' };
+    return map[playerConfig.vehicle] || '🏃';
+}
+
+// 自定义设置函数
+function setFace(type, btn) { playerConfig.face = type; updateActiveBtn(btn, 'face'); updatePreview(); }
+function setEyes(type, btn) { playerConfig.eyes = type; updateActiveBtn(btn, 'eyes'); updatePreview(); }
+function setHair(type, btn) { playerConfig.hair = type; updateActiveBtn(btn, 'hair'); updatePreview(); }
+function setAccessory(type, btn) { playerConfig.accessory = type; updateActiveBtn(btn, 'accessory'); updatePreview(); }
+
+function updateActiveBtn(activeBtn, type) {
+    const container = activeBtn.parentElement;
+    container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+    activeBtn.classList.add('active');
+}
+
+function selectVehicle(type, card) {
+    playerConfig.vehicle = type;
+    document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+}
+
+// 预览绘制
+function updatePreview() {
+    const pctx = previewCtx, w = previewCvs.width, h = previewCvs.height, cx = w/2, cy = h/2 + 20;
+    pctx.clearRect(0, 0, w, h);
+
+    // 身体
+    const g = pctx.createRadialGradient(cx-5, cy-5, 0, cx, cy, 22);
+    g.addColorStop(0, '#F472B6'); g.addColorStop(1, '#EC4899'); pctx.fillStyle = g;
+    pctx.beginPath(); pctx.arc(cx, cy, 22, 0, Math.PI*2); pctx.fill();
+
+    // 头发
+    switch(playerConfig.hair) {
+        case 'horns': pctx.fillStyle = '#8B5CF6'; pctx.beginPath(); pctx.moveTo(cx-12, cy-15); pctx.lineTo(cx-18, cy-35); pctx.lineTo(cx-6, cy-18); pctx.fill(); pctx.beginPath(); pctx.moveTo(cx+12, cy-15); pctx.lineTo(cx+18, cy-35); pctx.lineTo(cx+6, cy-18); pctx.fill(); break;
+        case 'bow': pctx.fillStyle = '#FF69B4'; pctx.beginPath(); pctx.arc(cx-10, cy-20, 8, 0, Math.PI*2); pctx.arc(cx+10, cy-20, 8, 0, Math.PI*2); pctx.fill(); pctx.fillStyle = '#FF1493'; pctx.fillRect(cx-3, cy-22, 6, 8); break;
+        case 'hat': pctx.fillStyle = '#333'; pctx.fillRect(cx-15, cy-20, 30, 5); pctx.fillRect(cx-10, cy-35, 20, 15); pctx.fillStyle = '#E74C3C'; pctx.fillRect(cx-10, cy-28, 20, 3); break;
+        case 'crown': pctx.fillStyle = '#FFD700'; pctx.beginPath(); pctx.moveTo(cx-15, cy-18); pctx.lineTo(cx-12, cy-35); pctx.lineTo(cx-6, cy-22); pctx.lineTo(cx, cy-38); pctx.lineTo(cx+6, cy-22); pctx.lineTo(cx+12, cy-35); pctx.lineTo(cx+15, cy-18); pctx.fill(); break;
+    }
+
+    // 眼睛
+    pctx.fillStyle = 'white'; pctx.beginPath(); pctx.arc(cx-8, cy-3, 6, 0, Math.PI*2); pctx.arc(cx+8, cy-3, 6, 0, Math.PI*2); pctx.fill();
+    pctx.fillStyle = '#333'; pctx.beginPath(); pctx.arc(cx-8, cy-3, 3, 0, Math.PI*2); pctx.arc(cx+8, cy-3, 3, 0, Math.PI*2); pctx.fill();
+
+    // 嘴巴
+    pctx.strokeStyle = '#333'; pctx.lineWidth = 2; pctx.beginPath(); pctx.arc(cx, cy+8, 4, 0.2, Math.PI-0.2); pctx.stroke();
+
+    // 配饰
+    switch(playerConfig.accessory) {
+        case 'glasses': pctx.strokeStyle = '#333'; pctx.lineWidth = 2; pctx.beginPath(); pctx.arc(cx-8, cy-3, 8, 0, Math.PI*2); pctx.arc(cx+8, cy-3, 8, 0, Math.PI*2); pctx.stroke(); break;
+        case 'scarf': pctx.fillStyle = '#E74C3C'; pctx.fillRect(cx-15, cy+15, 30, 8); break;
+        case 'wings': pctx.fillStyle = 'rgba(255,255,255,0.8)'; pctx.beginPath(); pctx.ellipse(cx-22, cy, 10, 6, -0.3, 0, Math.PI*2); pctx.ellipse(cx+22, cy, 10, 6, 0.3, 0, Math.PI*2); pctx.fill(); break;
+    }
+}
+
+// 游戏初始化
+function init() {
+    player = new Player(); cam = 0; blocks = []; coins = []; questions = [];
+
+    if (level === 1) {
+        blocks = [[0, 450, 2500, 50], [150, 380, 80, 20], [300, 320, 80, 20], [500, 380, 80, 20], [700, 280, 100, 20], [900, 350, 80, 20], [1150, 300, 80, 20], [1400, 380, 80, 20], [1700, 320, 100, 20]];
+        [180, 340, 340, 260, 540, 550, 750, 240, 940, 310, 1200, 260, 1450, 340, 1750, 280].forEach((v, i, arr) => { if (i % 2 === 0) coins.push(new Coin(v, arr[i + 1])); });
+        questions = [new QBlock(350, 250, 1), new QBlock(750, 200, 1), new QBlock(1200, 220, 1)];
+        flag = { x: 2000, y: 350 };
+    } else if (level === 2) {
+        blocks = [[0, 450, 3000, 50], [120, 400, 60, 20], [250, 340, 80, 20], [400, 400, 60, 20], [550, 280, 100, 20], [750, 350, 80, 20], [950, 250, 80, 20], [1150, 380, 80, 20], [1350, 300, 100, 20], [1600, 380, 80, 20], [1850, 320, 100, 20], [2100, 260, 100, 20], [2400, 350, 80, 20]];
+        [150, 360, 290, 300, 430, 360, 600, 240, 800, 310, 1000, 210, 1200, 340, 1400, 260, 1650, 340, 1900, 280, 2150, 220, 2450, 310].forEach((v, i, arr) => { if (i % 2 === 0) coins.push(new Coin(v, arr[i + 1])); });
+        questions = [new QBlock(600, 200, 2), new QBlock(1000, 170, 2), new QBlock(1400, 220, 2), new QBlock(2200, 190, 2)];
+        flag = { x: 2600, y: 280 };
+    } else {
+        blocks = [[0, 450, 3500, 50], [100, 380, 60, 20], [220, 320, 60, 20], [350, 400, 60, 20], [480, 340, 80, 20], [650, 280, 80, 20], [800, 400, 60, 20], [950, 320, 100, 20], [1150, 260, 80, 20], [1350, 380, 80, 20], [1550, 300, 100, 20], [1800, 400, 80, 20], [2050, 320, 100, 20], [2300, 250, 100, 20], [2550, 380, 80, 20], [2800, 300, 100, 20], [3100, 350, 80, 20]];
+        [130, 350, 250, 290, 380, 370, 520, 310, 700, 250, 830, 370, 1000, 290, 1200, 230, 1400, 350, 1600, 270, 1850, 370, 2100, 290, 2350, 220, 2600, 350, 2850, 270, 3150, 320].forEach((v, i, arr) => { if (i % 2 === 0) coins.push(new Coin(v, arr[i + 1])); });
+        questions = [new QBlock(520, 250, 3), new QBlock(1000, 210, 3), new QBlock(1600, 240, 3), new QBlock(2100, 250, 3), new QBlock(2850, 230, 3)];
+        flag = { x: 3300, y: 280 };
+    }
+}
+
+function update() {
+    if (state !== 'play') return;
+
+    // 移动控制
+    const speed = isVillain ? player.speed * 0.7 : player.speed; // 坏蛋变慢
+    if (keys['ArrowLeft']) player.vx = -speed;
+    else if (keys['ArrowRight']) player.vx = speed;
+    else player.vx *= 0.8;
+
+    player.update();
+
+    // 相机
+    const maxCam = level === 1 ? 1700 : (level === 2 ? 2200 : 2600);
+    cam = Math.max(0, Math.min(player.x - 200, maxCam));
+
+    // 收集糖果
+    for (let c of coins) {
+        if (!c.get && Math.hypot(player.x - c.x, player.y - c.y) < 30) {
+            c.get = true; candies++; score += 10; updateUI();
+        }
+    }
+
+    // 答题
+    for (let q of questions) {
+        if (!q.done && Math.hypot(player.x - q.x, player.y - q.y) < 40) showQ(q);
+    }
+
+    // 过关
+    if (Math.abs(player.x - flag.x) < 40 && Math.abs(player.y - flag.y) < 60) win();
+}
+
+function showQ(block) {
+    state = 'q';
+    document.getElementById('qtext').textContent = block.q.text;
+    const btns = document.getElementById('btns'); btns.innerHTML = '';
+    block.q.opts.forEach(opt => {
+        const b = document.createElement('button'); b.className = 'ans'; b.textContent = opt;
+        b.onclick = () => answer(block, opt);
+        btns.appendChild(b);
+    });
+    document.getElementById('panel').style.display = 'block';
+}
+
+function answer(block, sel) {
+    if (sel === block.q.ans) {
+        // 答对了
+        block.done = true; score += 50; candies += 2; updateUI();
+        // 答对解除坏蛋状态
+        if (isVillain) { isVillain = false; villainTime = 0; }
+    } else {
+        // 答错了 - 变身坏蛋！
+        isVillain = true;
+        villainTime = 300; // 5秒（60fps）
+        const hint = document.getElementById('transformHint');
+        hint.style.display = 'block';
+        setTimeout(() => hint.style.display = 'none', 1500);
+    }
+    document.getElementById('panel').style.display = 'none';
+    state = 'play';
+}
+
+function draw() {
+    ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    // 云
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for (let [x, y, r] of [[100, 80, 30], [300, 120, 40], [500, 60, 25], [700, 100, 35]]) {
+        ctx.beginPath(); ctx.arc(x - cam * 0.3, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 地面
+    const groundLen = level === 1 ? 2500 : (level === 2 ? 3000 : 3500);
+    ctx.fillStyle = '#4ADE80'; ctx.fillRect(0 - cam, 450, groundLen, 10);
+    ctx.fillStyle = '#D97706'; ctx.fillRect(0 - cam, 460, groundLen, 90);
+
+    // 平台
+    ctx.fillStyle = '#8B5CF6';
+    for (let b of blocks.slice(1)) ctx.fillRect(b[0] - cam, b[1], b[2], b[3]);
+
+    // 糖果、问题、旗帜、玩家
+    for (let c of coins) c.draw();
+    for (let q of questions) q.draw();
+    ctx.fillStyle = '#8B4513'; ctx.fillRect(flag.x - cam, flag.y, 8, 100);
+    ctx.fillStyle = '#FF6B6B'; ctx.beginPath(); ctx.moveTo(flag.x - cam + 8, flag.y); ctx.lineTo(flag.x - cam + 50, flag.y + 20); ctx.lineTo(flag.x - cam + 8, flag.y + 40); ctx.fill();
+    player.draw();
+}
+
+function loop() { if (state === 'play' || state === 'q') { update(); draw(); } requestAnimationFrame(loop); }
+
+function win() {
+    if (level < 3) {
+        level++; score += 100; isVillain = false;
+        // 显示过关提示
+        const hint = document.getElementById('transformHint');
+        hint.textContent = '🎉 第' + (level-1) + '关完成！';
+        hint.style.color = '#4ade80'; hint.style.display = 'block';
+        setTimeout(() => { hint.style.display = 'none'; hint.textContent = '😈 变身坏蛋!'; hint.style.color = '#8B0000'; }, 1500);
+        init(); updateUI();
+    } else {
+        state = 'over';
+        document.getElementById('endTitle').textContent = '🏆 全部通关!';
+        document.getElementById('final').textContent = score;
+        document.getElementById('finalCandy').textContent = candies;
+        document.getElementById('over').style.display = 'flex';
+    }
+}
+
+function restart() {
+    document.getElementById('over').style.display = 'none';
+    level = 1; score = 0; candies = 0; isVillain = false;
+    startGame();
+}
+
+function updateUI() {
+    document.getElementById('lvl').textContent = level;
+    document.getElementById('score').textContent = score;
+    document.getElementById('candy').textContent = candies;
+}
+
+// 输入控制
+document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (state === 'play') player.jump(); } });
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+function touch(id, key, jump) {
+    const btn = document.getElementById(id);
+    btn.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; if (jump && state === 'play') player.jump(); });
+    btn.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; });
+}
+touch('l', 'ArrowLeft', false); touch('r', 'ArrowRight', false); touch('j', 'Space', true);
+
+// 自适应
+if (window.innerWidth <= 768) { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
+</script>
+</body>
+</html>
