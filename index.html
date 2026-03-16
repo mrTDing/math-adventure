@@ -543,7 +543,7 @@ let selectedCircusAnimal = null;
 let circusPlayer = null;
 let circusRings = []; // 火圈数组
 let circusDistance = 0; // 跑过的距离
-let circusTargetDistance = 10000; // 目标距离
+let circusTargetDistance = 1500; // 目标距离1500米，约30秒完成
 let circusSpeed = 0;
 let circusAnimId = null;
 let circusQuestionActive = false;
@@ -2931,13 +2931,13 @@ function initCircus() {
     currentLane = 1; // 重置到中间跑道
 
     // 生成火圈 - 随机出现在3条跑道之一
-    // 火圈应该均匀分布在整个赛道上
-    const totalRings = 20; // 固定20个火圈
-    const spacing = circusTargetDistance / totalRings; // 均匀间距
+    // 1500米赛道，约30秒完成，设置5-6个火圈
+    const totalRings = 6;
+    const spacing = 200; // 每200米一个火圈
 
     for (let i = 0; i < totalRings; i++) {
-        // 火圈分布在赛道上，起始位置为 500 + i * spacing，加上一些随机偏移
-        const ringX = 500 + i * spacing + Math.random() * 200;
+        // 火圈分布在赛道上，起始位置为 300 + i * spacing
+        const ringX = 300 + i * spacing + Math.random() * 50;
         // 随机选择跑道 0=上, 1=中, 2=下
         const lane = Math.floor(Math.random() * 3);
         circusRings.push(new FireRing(ringX, lane, true));
@@ -3215,8 +3215,10 @@ function drawCircus() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fillRect(20, 20, w - 40, 20);
 
-    // 绘制进度
-    const progress = Math.min(circusDistance / circusTargetDistance, 1);
+    // 绘制进度（基于剩余火圈数量）
+    const passedRings = circusRings.filter(r => r.passed).length;
+    const totalRings = circusRings.length;
+    const progress = totalRings > 0 ? passedRings / totalRings : 0;
     ctx.fillStyle = '#4ade80';
     ctx.fillRect(20, 20, (w - 40) * progress, 20);
 
@@ -3250,7 +3252,8 @@ function drawCircus() {
     ctx.textAlign = 'left';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
-    ctx.fillText(`🏃 距离: ${Math.floor(circusDistance)}m / ${circusTargetDistance}m`, 20, 70);
+    const passedRings = circusRings.filter(r => r.passed).length;
+    ctx.fillText(`🔥 ${passedRings}/${circusRings.length} 个火圈`, 20, 70);
     ctx.shadowBlur = 0;
 
     // 绘制操作提示
@@ -3421,12 +3424,16 @@ function circusWin() {
         animation: fadeIn 0.5s ease-out;
     `;
 
+    // 计算通过的火圈数量
+    const passedRings = circusRings.filter(r => r.passed).length;
+
     victoryDiv.innerHTML = `
         <div style="font-size: 100px; animation: bounce 0.8s ease-in-out infinite;">🎪</div>
         <h1 style="font-size: 48px; margin: 20px 0; text-shadow: 3px 3px 6px rgba(0,0,0,0.3);">🎉 表演大成功! 🎉</h1>
         <p style="font-size: 24px; margin: 15px;">${selectedCircusAnimal?.name || '小动物'} 完成了精彩表演!</p>
-        <div style="background: rgba(255,255,255,0.2); padding: 20px 40px; border-radius: 20px; margin: 20px;">
-            <p style="font-size: 32px; margin: 0;">跑过的距离: ${Math.floor(circusDistance)}m</p>
+        <div style="background: rgba(255,255,255,0.2); padding: 20px 40px; border-radius: 20px; margin: 20px; text-align: center;">
+            <p style="font-size: 28px; margin: 0;">🔥 成功穿越: ${passedRings}/${circusRings.length} 个火圈</p>
+            <p style="font-size: 20px; margin: 10px 0 0 0; opacity: 0.9;">用时约30秒，太棒了!</p>
         </div>
         <div style="margin-top: 30px;">
             <button onclick="closeCircusVictory(); restartCircus();" style="
