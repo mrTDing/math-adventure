@@ -653,8 +653,8 @@ class Player {
         const maxX = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
         if (this.x < this.r) this.x = this.r;
         if (this.x > maxX) this.x = maxX;
-        // 顶部边界，防止跳出画面
-        if (this.y < 50) { this.y = 50; this.vy = 0; }
+        // 顶部边界，防止跳出画面（限制在画面内）
+        if (this.y < 150) { this.y = 150; this.vy = 0.5; }
         if (this.y > 600) {
             AudioSys.playFail();
             state = 'over';
@@ -2160,7 +2160,7 @@ class BirdEnemy {
         this.y = y;
         this.w = 25;
         this.h = 20;
-        this.speed = 0.1 + Math.random() * 0.2; // 速度0.1-0.3，极慢便于玩家瞄准攻击
+        this.speed = 0.05 + Math.random() * 0.1; // 速度0.05-0.15，超慢便于玩家瞄准攻击
         this.dead = false;
         this.hp = 3;
         this.hitFlash = 0;
