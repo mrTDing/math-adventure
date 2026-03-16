@@ -3197,13 +3197,15 @@ function initCircus() {
     currentLane = 1; // 重置到中间跑道
 
     // 生成火圈 - 随机出现在3条跑道之一
-    // 1500米赛道，约30秒完成，设置5-6个火圈
-    const totalRings = 6;
-    const spacing = 200; // 每200米一个火圈
+    // 1500米赛道，约30秒完成，火圈均匀分散在整个赛道上
+    const totalRings = 5;
+    const trackLength = 1200; // 实际使用赛道长度
+    const startOffset = 200;  // 起始偏移
 
     for (let i = 0; i < totalRings; i++) {
-        // 火圈分布在赛道上，起始位置为 300 + i * spacing
-        const ringX = 300 + i * spacing + Math.random() * 50;
+        // 火圈均匀分布在整个赛道上，加上随机偏移
+        const baseX = startOffset + (i / (totalRings - 1)) * trackLength;
+        const ringX = baseX + (Math.random() - 0.5) * 150; // ±75的随机偏移
         // 随机选择跑道 0=上, 1=中, 2=下
         const lane = Math.floor(Math.random() * 3);
         circusRings.push(new FireRing(ringX, lane, true));
@@ -3398,9 +3400,12 @@ function updateCircus() {
             ring.passed = true;
         }
 
-        // 如果回答了但没答对，且已经错过火圈，游戏结束
-        if (!ring.passed && ring.answered && !ring.correct && ring.x < circusPlayer.x - 80) {
-            circusGameOver(false);
+        // 如果回答了但没答对，且已经错过火圈，立即结束游戏
+        if (!ring.passed && ring.answered && !ring.correct && ring.x < circusPlayer.x - 50) {
+            if (state === 'play') {
+                state = 'over';
+                setTimeout(() => circusGameOver(false), 0);
+            }
             return;
         }
     }
@@ -3644,10 +3649,15 @@ function answerCircusQuestion(answer, correct, btn) {
         currentRing.answered = true;
         currentRing.correct = false;
 
+        // 立即关闭题目，避免状态不一致导致卡屏
+        circusQuestionActive = false;
+        state = 'play';
+
         setTimeout(() => {
             modal.remove();
-            circusGameOver(false);
-        }, 500);
+            // 玩家可以继续跑，但当前火圈已标记为错误
+            // 当玩家错过火圈后游戏结束
+        }, 300);
     }
 }
 
