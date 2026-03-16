@@ -230,8 +230,10 @@
 <script>
 // ==================== 音效系统 ====================
 const AudioSys = {
-    ctx: null, isMuted: false,
-    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+    ctx: null, isMuted: false, bgmOscillators: [], bgmGain: null, isBGMPlaying: false,
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    },
     playJump() { this.playTone(200, 600, 0.1, 'sine'); },
     playCoin() { this.playTone(1200, 1600, 0.15, 'sine'); },
     playWin() { this.playChord([523, 659, 784, 1046], 0.4); },
@@ -256,7 +258,68 @@ const AudioSys = {
     playChord(freqs, duration) {
         freqs.forEach(f => this.playTone(f, f, duration, 'triangle'));
     },
-    toggleMute() { this.isMuted = !this.isMuted; return this.isMuted; },
+    // 背景音乐系统 - 轻松欢快的旋律
+    startBGM() {
+        if (this.isBGMPlaying || this.isMuted || !this.ctx) return;
+        this.isBGMPlaying = true;
+        this.bgmGain = this.ctx.createGain();
+        this.bgmGain.gain.value = 0.08; // 背景音量较小
+        this.bgmGain.connect(this.ctx.destination);
+        this.playBGMSequence();
+    },
+    stopBGM() {
+        this.isBGMPlaying = false;
+        this.bgmOscillators.forEach(osc => {
+            try { osc.stop(); } catch(e) {}
+        });
+        this.bgmOscillators = [];
+        if (this.bgmGain) {
+            this.bgmGain.disconnect();
+            this.bgmGain = null;
+        }
+    },
+    playBGMSequence() {
+        if (!this.isBGMPlaying) return;
+        // 轻松欢快的音符序列 (C大调)
+        const melody = [
+            {n: 523, d: 0.4}, {n: 587, d: 0.4}, {n: 659, d: 0.4}, {n: 784, d: 0.4},
+            {n: 659, d: 0.4}, {n: 587, d: 0.4}, {n: 523, d: 0.4}, {n: 0, d: 0.2},
+            {n: 659, d: 0.3}, {n: 784, d: 0.3}, {n: 880, d: 0.3}, {n: 1046, d: 0.6},
+            {n: 880, d: 0.3}, {n: 784, d: 0.3}, {n: 659, d: 0.3}, {n: 0, d: 0.2},
+            {n: 523, d: 0.4}, {n: 659, d: 0.4}, {n: 587, d: 0.4}, {n: 523, d: 0.4},
+            {n: 587, d: 0.4}, {n: 659, d: 0.4}, {n: 523, d: 0.8}, {n: 0, d: 0.2}
+        ];
+        let time = this.ctx.currentTime;
+        melody.forEach(note => {
+            if (note.n > 0) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = note.n;
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(0.06, time + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, time + note.d - 0.05);
+                osc.connect(gain);
+                gain.connect(this.bgmGain);
+                osc.start(time);
+                osc.stop(time + note.d);
+                this.bgmOscillators.push(osc);
+            }
+            time += note.d;
+        });
+        // 循环播放
+        const totalDuration = melody.reduce((sum, n) => sum + n.d, 0);
+        this.bgmTimeout = setTimeout(() => this.playBGMSequence(), totalDuration * 1000 - 100);
+    },
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.isMuted) {
+            this.stopBGM();
+        } else {
+            this.startBGM();
+        }
+        return this.isMuted;
+    },
     speak(text, lang = 'zh-CN') {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
@@ -2403,6 +2466,8 @@ function startElimination() {
     elimTarget = Math.floor(Math.random() * 6) + 5;
     document.getElementById('elimTargetNum').textContent = elimTarget;
     document.getElementById('targetNum').textContent = elimTarget;
+    // 启动背景音乐
+    AudioSys.startBGM();
     elimLoop();
 }
 
@@ -2725,18 +2790,6 @@ class FireRing {
             ctx.fill();
         }
 
-        // 火圈金属支架（左右两侧）
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(-this.radius, 0);
-        ctx.lineTo(-this.radius - 15, 140);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(this.radius, 0);
-        ctx.lineTo(this.radius + 15, 140);
-        ctx.stroke();
-
         // 火圈内圈（空心）
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
@@ -2917,8 +2970,8 @@ function createCircusSelectUI() {
         z-index: 1000;
     `;
     div.innerHTML = `
-        <h1 style="font-size: 42px; color: white; margin-bottom: 20px; text-shadow: 3px 3px 6px rgba(0,0,0,0.3);">🎪 选择你的小动物</h1>
-        <div id="circusAnimalGrid" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 700px; margin: 20px;"></div>
+        <h1 style="font-size: 36px; color: white; margin-bottom: 10px; margin-top: 20px; text-shadow: 3px 3px 6px rgba(0,0,0,0.3);">🎪 选择你的小动物</h1>
+        <div id="circusAnimalGrid" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; max-width: 700px; max-height: 55vh; overflow-y: auto; padding: 10px; margin: 10px 0;"></div>
         <button id="startCircusBtn" onclick="startCircusGame()" style="
             margin-top: 30px;
             padding: 18px 50px;
@@ -2987,6 +3040,9 @@ function startCircusGame() {
 
     // 初始化游戏
     initCircus();
+
+    // 启动背景音乐
+    AudioSys.startBGM();
 
     // 开始游戏循环
     circusLoop();
@@ -3383,6 +3439,8 @@ function startGameAfterSelection() {
     state = 'play'; initPlatformer();
     lastTime = 0;
     frameCount = 0;
+    // 启动背景音乐
+    AudioSys.startBGM();
     loop();
 }
 
@@ -3396,15 +3454,30 @@ function loop(timestamp) {
 }
 
 function restart() {
+    // 先设置状态为over，阻止所有游戏循环继续运行
+    state = 'over';
+
     document.getElementById('over').style.display = 'none';
-    if (elimAnimId) cancelAnimationFrame(elimAnimId);
-    if (platformerAnimId) cancelAnimationFrame(platformerAnimId);
-    if (circusAnimId) cancelAnimationFrame(circusAnimId);
+
+    // 取消所有动画帧
+    if (elimAnimId) {
+        cancelAnimationFrame(elimAnimId);
+        elimAnimId = null;
+    }
+    if (platformerAnimId) {
+        cancelAnimationFrame(platformerAnimId);
+        platformerAnimId = null;
+    }
+    if (circusAnimId) {
+        cancelAnimationFrame(circusAnimId);
+        circusAnimId = null;
+    }
+
     lastTime = 0;
     frameCount = 0;
+
     // 重置键盘状态，防止按键残留导致加速
     keys = {};
-    // 重置所有按键
     ['ArrowLeft', 'ArrowRight', 'Space', 'KeyF'].forEach(k => keys[k] = false);
     if (gameMode === 'platformer') {
         level = 1; score = 0; candies = 0;
