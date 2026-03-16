@@ -2679,11 +2679,10 @@ class CircusPlayer {
 }
 
 class FireRing {
-    constructor(x, isQuestion = true) {
+    constructor(x, y, isQuestion = true) {
         this.x = x;
-        this.y = 380;
-        this.width = 80;
-        this.height = 80;
+        this.y = y || 320; // 火圈中心离地高度（垂直方向），默认320
+        this.radius = 45; // 火圈半径
         this.passed = false;
         this.isQuestion = isQuestion;
         this.question = isQuestion ? generateCircusQuestion() : null;
@@ -2691,6 +2690,7 @@ class FireRing {
         this.questionShown = false;
         this.answered = false;
         this.correct = false;
+        this.passingThrough = false; // 是否正在穿过火圈
     }
 
     update() {
@@ -2706,65 +2706,103 @@ class FireRing {
         // 火焰动画
         const flameOffset = Math.sin(this.animationFrame * 0.2) * 3;
 
-        // 外圈火焰
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2 + this.animationFrame * 0.05;
-            const radius = 42 + Math.sin(this.animationFrame * 0.3 + i) * 3;
+        // 外圈火焰 - 垂直圆形火圈
+        for (let i = 0; i < 16; i++) {
+            const angle = (i / 16) * Math.PI * 2 + this.animationFrame * 0.05;
+            const radius = this.radius + 8 + Math.sin(this.animationFrame * 0.3 + i) * 4;
             const fx = Math.cos(angle) * radius;
-            const fy = Math.sin(angle) * radius * 0.6;
+            const fy = Math.sin(angle) * radius;
 
             // 火焰渐变
-            const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, 12);
+            const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, 14);
             grad.addColorStop(0, '#FFD700');
-            grad.addColorStop(0.5, '#FF8C00');
+            grad.addColorStop(0.4, '#FF8C00');
+            grad.addColorStop(0.8, '#FF4500');
             grad.addColorStop(1, 'rgba(255,69,0,0)');
 
             ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.arc(fx, fy + flameOffset, 12, 0, Math.PI * 2);
+            ctx.arc(fx, fy + flameOffset * 0.5, 14, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // 火圈内圈
-        ctx.fillStyle = '#333';
+        // 火圈金属支架（左右两侧）
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 6;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 35, 25, 0, 0, Math.PI * 2);
+        ctx.moveTo(-this.radius, 0);
+        ctx.lineTo(-this.radius - 15, 140);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.radius, 0);
+        ctx.lineTo(this.radius + 15, 140);
+        ctx.stroke();
+
+        // 火圈内圈（空心）
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius - 8, 0, Math.PI * 2);
         ctx.fill();
 
-        // 火圈边框
-        ctx.strokeStyle = '#FF4500';
-        ctx.lineWidth = 4;
+        // 火圈内边框
+        ctx.strokeStyle = '#FF6347';
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 38, 28, 0, 0, Math.PI * 2);
+        ctx.arc(0, 0, this.radius - 5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 火圈外边框
+        ctx.strokeStyle = '#FF4500';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
         ctx.stroke();
 
         // 如果已回答正确，显示绿色勾
         if (this.answered && this.correct) {
             ctx.fillStyle = '#4ade80';
-            ctx.font = 'bold 30px Arial';
+            ctx.font = 'bold 36px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 5;
             ctx.fillText('✓', 0, 0);
+            ctx.shadowBlur = 0;
         }
 
         // 如果已回答错误，显示红色叉
         if (this.answered && !this.correct) {
             ctx.fillStyle = '#FF4444';
-            ctx.font = 'bold 30px Arial';
+            ctx.font = 'bold 36px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 5;
             ctx.fillText('✗', 0, 0);
+            ctx.shadowBlur = 0;
         }
 
         ctx.restore();
     }
 
     checkCollision(player) {
-        // 检查是否穿过火圈中心
+        // 检查玩家是否从火圈中间穿过
         const dx = this.x - player.x;
-        const dy = this.y - (player.y - 20);
+        const dy = this.y - (player.y - 25); // 玩家中心点
         const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < 30 && !this.passed;
+
+        // 玩家在火圈圆形范围内（内圈）
+        return distance < (this.radius - 15) && !this.passed;
+    }
+
+    checkApproaching(player) {
+        // 检查是否接近火圈需要出题（距离火圈一定距离时）
+        const dx = this.x - player.x;
+        const dy = this.y - (player.y - 25);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // 接近火圈但还没到，需要出题
+        return distance < 250 && distance > this.radius && this.x > player.x - 50;
     }
 }
 
@@ -2795,13 +2833,18 @@ function initCircus() {
     circusQuestionActive = false;
     currentRing = null;
 
-    // 生成火圈
+    // 生成火圈 - 不同高度，增加挑战性
     let ringX = 800;
     const ringSpacing = 600;
     const totalRings = Math.floor(circusTargetDistance / ringSpacing);
 
+    // 火圈高度选项：低(容易)、中(需要跳跃)、高(需要大跳)
+    const ringHeights = [360, 320, 280, 240];
+
     for (let i = 0; i < totalRings; i++) {
-        circusRings.push(new FireRing(ringX, true));
+        // 随机选择火圈高度
+        const height = ringHeights[Math.floor(Math.random() * ringHeights.length)];
+        circusRings.push(new FireRing(ringX, height, true));
         ringX += ringSpacing + Math.random() * 200;
     }
 }
@@ -2971,21 +3014,30 @@ function updateCircus() {
     for (let ring of circusRings) {
         ring.update();
 
-        // 检查是否接近火圈需要出题
-        if (!ring.passed && !ring.questionShown && ring.x - circusPlayer.x < 300 && ring.x > circusPlayer.x) {
+        // 检查是否接近火圈需要出题（使用新的检测方法）
+        if (!ring.passed && !ring.questionShown && ring.checkApproaching(circusPlayer)) {
             ring.questionShown = true;
             currentRing = ring;
             showCircusQuestion(ring);
         }
 
-        // 检查是否成功通过
-        if (!ring.passed && ring.x < circusPlayer.x - 50) {
-            if (!ring.answered) {
-                // 没回答就错过了，也算失败
-                circusGameOver(false);
-                return;
-            }
+        // 检查是否成功穿过火圈（玩家必须从火圈中间穿过）
+        if (!ring.passed && ring.answered && ring.correct && ring.checkCollision(circusPlayer)) {
             ring.passed = true;
+            ring.passingThrough = true;
+            // 播放成功穿过音效
+            AudioSys.playCoin();
+        }
+
+        // 如果已经回答正确但没从中间穿过，火圈移到身后也算通过
+        if (!ring.passed && ring.answered && ring.correct && ring.x < circusPlayer.x - 80) {
+            ring.passed = true;
+        }
+
+        // 如果回答了但没答对，且已经错过火圈，游戏结束
+        if (!ring.passed && ring.answered && !ring.correct && ring.x < circusPlayer.x - 80) {
+            circusGameOver(false);
+            return;
         }
     }
 
@@ -3078,10 +3130,15 @@ function drawCircus() {
     ctx.shadowBlur = 0;
 
     // 绘制操作提示
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.font = '16px Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 18px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('点击屏幕或按空格键跳跃', w / 2, h - 30);
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 4;
+    ctx.fillText('🔥 跳起来从火圈中间穿过去！🔥', w / 2, h - 35);
+    ctx.font = '14px Arial';
+    ctx.fillText('点击屏幕或按空格键跳跃', w / 2, h - 15);
+    ctx.shadowBlur = 0;
 }
 
 // 显示马戏团问题
@@ -3121,8 +3178,9 @@ function showCircusQuestion(ring) {
             width: 90%;
         ">
             <div style="font-size: 60px; margin-bottom: 20px;">🔥</div>
-            <h2 style="font-size: 28px; color: #333; margin-bottom: 20px;">穿越火圈!</h2>
-            <p style="font-size: 18px; color: #666; margin-bottom: 20px;">回答正确才能安全通过</p>
+            <h2 style="font-size: 28px; color: #333; margin-bottom: 10px;">穿越火圈!</h2>
+            <p style="font-size: 16px; color: #FF6B6B; margin-bottom: 10px; font-weight: bold;">🎯 答对后需要从火圈中间跳过去！</p>
+            <p style="font-size: 16px; color: #666; margin-bottom: 20px;">回答正确才能安全通过</p>
             <div style="
                 font-size: 42px;
                 font-weight: bold;
