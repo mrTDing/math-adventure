@@ -571,12 +571,20 @@ const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
 let specialTransformBox = null; // 特殊变身箱子
 
 // 道具类型
+// 玩家火力状态
+let playerFireMode = 'normal'; // normal, electric, spread, flame
+let fireModeTimer = 0;
+const FIRE_MODE_DURATION = 600; // 10秒
+
 const ITEM_TYPES = {
     SUNFLOWER: { emoji: '🌻', score: 50, effect: 'score' },
-    MUSHROOM: { emoji: '🍄', effect: 'grow' },
     STAR: { emoji: '⭐', effect: 'invincible' },
     COIN: { emoji: '🪙', score: 30, effect: 'score' },
-    DIAMOND: { emoji: '💎', score: 80, effect: 'score' }
+    DIAMOND: { emoji: '💎', score: 80, effect: 'score' },
+    // 火力增强道具（概率低于计算题）
+    ELECTRIC: { emoji: '⚡', effect: 'fireMode', mode: 'electric', name: '电击弹' },
+    SPREAD: { emoji: '🔥', effect: 'fireMode', mode: 'spread', name: '散弹枪' },
+    FLAME: { emoji: '🐉', effect: 'fireMode', mode: 'flame', name: '火龙炮' }
 };
 
 // ==================== 消消乐变量 ====================
@@ -663,6 +671,15 @@ class Player {
             if (this.transformTimer <= 0) {
                 this.isTransformed = false;
                 showHint('变身结束！');
+            }
+        }
+
+        // 火力模式倒计时
+        if (fireModeTimer > 0) {
+            fireModeTimer--;
+            if (fireModeTimer <= 0) {
+                playerFireMode = 'normal';
+                showHint('火力增强结束！');
             }
         }
     }
@@ -1386,12 +1403,12 @@ class Player {
         ctx.lineTo(s*0.45, s*1.4);
         ctx.fill();
 
-        // 变身剩余时间指示器
+        // 变身剩余时间指示器（移到角色下方）
         if (this.transformTimer > 0) {
             ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
             ctx.font = `bold ${s*0.4}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, -s*0.8);
+            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*1.5);
         }
     }
 
@@ -1737,11 +1754,15 @@ class QBlock {
         this.x=x; this.y=y; this.done=false;
         this.q=this.makeQByDifficulty();
         const rand = Math.random();
-        if (rand < 0.2) this.itemType = 'MUSHROOM';
-        else if (rand < 0.4) this.itemType = 'STAR';
-        else if (rand < 0.6) this.itemType = 'SUNFLOWER';
-        else if (rand < 0.8) this.itemType = 'COIN';
-        else this.itemType = 'DIAMOND';
+        // 道具生成概率：火力增强道具（15%）+ 其他道具（85%）
+        // 火力增强道具概率低于计算题（30%出道具，70%计算题）
+        if (rand < 0.05) this.itemType = 'ELECTRIC';      // 5% 电击弹
+        else if (rand < 0.10) this.itemType = 'SPREAD';   // 5% 散弹枪
+        else if (rand < 0.15) this.itemType = 'FLAME';    // 5% 火龙炮
+        else if (rand < 0.35) this.itemType = 'STAR';     // 20% 星星
+        else if (rand < 0.55) this.itemType = 'SUNFLOWER';// 20% 向日葵
+        else if (rand < 0.80) this.itemType = 'COIN';     // 25% 金币
+        else this.itemType = 'DIAMOND';                   // 20% 钻石
         this.itemSpawned = false;
     }
 
@@ -1884,14 +1905,35 @@ class Item {
 
 // ==================== 炮弹类 ====================
 class Bullet {
-    constructor(x, y, direction) {
+    constructor(x, y, direction, type = 'normal') {
         this.x = x;
         this.y = y;
+        this.type = type;
         this.vx = direction * 8; // 炮弹速度
         this.vy = 0;
         this.r = 6;
         this.dead = false;
         this.life = 60; // 炮弹存在时间（帧数）
+
+        // 根据类型设置属性
+        switch(type) {
+            case 'electric':
+                this.r = 8;
+                this.vx = direction * 12; // 更快
+                this.damage = 2; // 双倍伤害
+                break;
+            case 'spread':
+                this.r = 10;
+                this.damage = 1;
+                break;
+            case 'flame':
+                this.r = 12;
+                this.vx = direction * 6; // 较慢但范围大
+                this.damage = 3; // 高伤害
+                break;
+            default:
+                this.damage = 1;
+        }
     }
 
     update() {
@@ -1910,8 +1952,34 @@ class Bullet {
         // 检测与敌人碰撞
         for (let e of enemies) {
             if (!e.dead && Math.hypot(this.x - e.x, this.y - e.y) < 25) {
-                this.dead = true;
-                if (e.hit()) {
+                // 火龙炮有范围伤害效果
+                if (this.type === 'flame') {
+                    // 范围伤害 - 同时伤害附近的敌人
+                    enemies.forEach(nearby => {
+                        if (!nearby.dead && Math.hypot(this.x - nearby.x, this.y - nearby.y) < 60) {
+                            for (let i = 0; i < this.damage; i++) {
+                                if (nearby.hit()) {
+                                    score += 100;
+                                    updateUI();
+                                    AudioSys.playCoin();
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                    this.dead = true;
+                    return;
+                }
+
+                // 普通和电击、散弹的单体伤害
+                let killed = false;
+                for (let i = 0; i < this.damage; i++) {
+                    if (e.hit()) {
+                        killed = true;
+                    }
+                }
+
+                if (killed) {
                     // 敌人死亡，加分
                     score += 100;
                     updateUI();
@@ -1919,6 +1987,11 @@ class Bullet {
                 } else {
                     // 敌人受伤
                     AudioSys.playHit();
+                }
+
+                // 电击弹可以穿透（不死亡），其他子弹死亡
+                if (this.type !== 'electric') {
+                    this.dead = true;
                 }
                 return;
             }
@@ -1930,24 +2003,79 @@ class Bullet {
         ctx.save();
         ctx.translate(this.x - cam, this.y);
 
-        // 炮弹光晕效果
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 10;
+        // 根据子弹类型绘制不同外观
+        switch(this.type) {
+            case 'electric':
+                // 电击弹 - 蓝色闪电
+                ctx.shadowColor = '#00FFFF';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#00FFFF';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                // 闪电符号
+                ctx.strokeStyle = '#0000FF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-3, -5);
+                ctx.lineTo(2, 0);
+                ctx.lineTo(-2, 0);
+                ctx.lineTo(3, 5);
+                ctx.stroke();
+                break;
 
-        // 炮弹主体
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-        ctx.fill();
+            case 'spread':
+                // 散弹 - 红色火焰
+                ctx.shadowColor = '#FF4500';
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = '#FF4500';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                break;
 
-        // 炮弹内核
-        ctx.fillStyle = '#FF6B00';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.r * 0.6, 0, Math.PI * 2);
-        ctx.fill();
+            case 'flame':
+                // 火龙炮 - 橙色大火球
+                ctx.shadowColor = '#FF8C00';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = '#FF8C00';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FF4500';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+
+            default:
+                // 普通炮弹
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FF6B00';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+        }
 
         // 尾焰效果
-        const tailLen = 15;
+        const tailLen = this.type === 'flame' ? 25 : 15;
         const tailDir = this.vx > 0 ? -1 : 1;
         ctx.fillStyle = `rgba(255, 100, 0, ${this.life / 60})`;
         ctx.beginPath();
@@ -2012,6 +2140,106 @@ class Enemy {
         ctx.strokeRect(-15, -28, 30, 6);
         ctx.restore();
     }
+    hit() {
+        this.hp--;
+        this.hitFlash = 10;
+        if (this.hp <= 0) {
+            this.dead = true;
+            return true;
+        }
+        return false;
+    }
+}
+
+// ==================== 飞行小鸟敌人 ====================
+class BirdEnemy {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.w = 25;
+        this.h = 20;
+        this.speed = 2 + Math.random() * 1.5;
+        this.dead = false;
+        this.hp = 3;
+        this.hitFlash = 0;
+        this.wingAngle = 0;
+        this.wingSpeed = 0.2 + Math.random() * 0.1;
+        this.yOffset = 0;
+        this.yBase = y;
+    }
+
+    update() {
+        if (this.dead) return;
+        this.x -= this.speed; // 向左飞行
+        this.wingAngle += this.wingSpeed;
+        this.yOffset = Math.sin(this.wingAngle * 2) * 10;
+        this.y = this.yBase + this.yOffset;
+        if (this.hitFlash > 0) this.hitFlash--;
+    }
+
+    draw() {
+        if (this.dead) return;
+        ctx.save();
+        ctx.translate(this.x - cam, this.y);
+        if (this.hitFlash > 0) ctx.globalAlpha = 0.5;
+
+        // 身体
+        ctx.fillStyle = '#FF6347';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 翅膀（扇动动画）
+        const wingY = Math.sin(this.wingAngle) * 8;
+        ctx.fillStyle = '#FF8C00';
+        ctx.beginPath();
+        ctx.moveTo(-5, -5);
+        ctx.lineTo(5, -5);
+        ctx.lineTo(0, -15 + wingY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 眼睛
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(-8, -3, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(-9, -3, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 嘴巴
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.moveTo(-18, 0);
+        ctx.lineTo(-25, 3);
+        ctx.lineTo(-18, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // 尾巴
+        ctx.fillStyle = '#FF6347';
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(22, -5);
+        ctx.lineTo(22, 5);
+        ctx.closePath();
+        ctx.fill();
+
+        // 血条
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(-15, -22, 30, 4);
+        ctx.fillStyle = '#0f0';
+        ctx.fillRect(-15, -22, 30 * (this.hp / 3), 4);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-15, -22, 30, 4);
+
+        ctx.restore();
+    }
+
     hit() {
         this.hp--;
         this.hitFlash = 10;
@@ -2106,6 +2334,11 @@ function initPlatformer() {
             enemies.push(new Enemy(i, 420, 100 + Math.random() * 100));
         }
 
+        // 飞行小鸟（空中敌人）
+        for (let i = 1200; i < levelLength - 1000; i += 800) {
+            enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
+        }
+
         flag = {x: levelLength - 300, y: 350};
 
     } else if (level === 2) {
@@ -2131,6 +2364,11 @@ function initPlatformer() {
             enemies.push(new Enemy(i, 420, 80 + Math.random() * 120));
         }
 
+        // 飞行小鸟（更多）
+        for (let i = 1000; i < levelLength - 1000; i += 600) {
+            enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
+        }
+
         flag = {x: levelLength - 300, y: 300};
 
     } else {
@@ -2154,6 +2392,11 @@ function initPlatformer() {
 
         for (let i = 600; i < levelLength - 1000; i += 300) {
             enemies.push(new Enemy(i, 420, 60 + Math.random() * 150));
+        }
+
+        // 飞行小鸟（大量）
+        for (let i = 800; i < levelLength - 1000; i += 400) {
+            enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
         }
 
         flag = {x: levelLength - 300, y: 280};
@@ -2263,7 +2506,9 @@ function updatePlatformer(timestamp) {
                     updateProgressBar();
                 }
 
-                showHint(q.itemType === 'MUSHROOM' ? '🍄 蘑菇!' :
+                showHint(q.itemType === 'ELECTRIC' ? '⚡ 电击弹!' :
+                         q.itemType === 'SPREAD' ? '🔥 散弹枪!' :
+                         q.itemType === 'FLAME' ? '🐉 火龙炮!' :
                          q.itemType === 'STAR' ? '⭐ 星星!' :
                          q.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                          q.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
@@ -2370,6 +2615,21 @@ function drawPlatformer() {
     }
 
     player.draw();
+
+    // 绘制当前火力模式
+    if (playerFireMode !== 'normal' && fireModeTimer > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(10, 100, 120, 35);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'left';
+        const modeName = playerFireMode === 'electric' ? '⚡电击弹' :
+                        playerFireMode === 'spread' ? '🔥散弹枪' : '🐉火龙炮';
+        ctx.fillText(modeName, 15, 115);
+        ctx.fillStyle = '#FFF';
+        ctx.font = '12px Arial';
+        ctx.fillText(`${Math.ceil(fireModeTimer/60)}秒`, 15, 128);
+    }
 }
 
 // 提示系统
@@ -2433,7 +2693,9 @@ function answer(block, sel) {
             item.vx = (Math.random() - 0.5) * 2;
             items.push(item);
             block.itemSpawned = true;
-            showHint(block.itemType === 'MUSHROOM' ? '🍄 蘑菇!' :
+            showHint(block.itemType === 'ELECTRIC' ? '⚡ 电击弹!' :
+                     block.itemType === 'SPREAD' ? '🔥 散弹枪!' :
+                     block.itemType === 'FLAME' ? '🐉 火龙炮!' :
                      block.itemType === 'STAR' ? '⭐ 星星!' :
                      block.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                      block.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
@@ -2448,8 +2710,12 @@ function collectItem(type) {
     const item = ITEM_TYPES[type];
     if (item.effect === 'score') {
         score += item.score; AudioSys.playCoin();
-    } else if (item.effect === 'grow') {
-        player.isBig = true; AudioSys.playTransform();
+    } else if (item.effect === 'fireMode') {
+        // 火力增强道具
+        playerFireMode = item.mode;
+        fireModeTimer = FIRE_MODE_DURATION;
+        AudioSys.playTransform();
+        showHint(`${item.emoji} ${item.name}！火力增强！`);
     } else if (item.effect === 'invincible') {
         player.invincible = 300; AudioSys.playTransform();
     }
@@ -3705,13 +3971,59 @@ function fireBullet() {
     // 确定发射方向（根据玩家移动方向，默认向右）
     const direction = player.vx < 0 ? -1 : 1;
 
-    // 创建炮弹（从玩家前方发射）
-    const bullet = new Bullet(
-        player.x + direction * 30,
-        player.y,
-        direction
-    );
-    bullets.push(bullet);
+    // 根据火力模式发射不同类型的子弹
+    switch(playerFireMode) {
+        case 'electric':
+            // 电击弹 - 单发高速穿透
+            bullets.push(new Bullet(
+                player.x + direction * 30,
+                player.y,
+                direction,
+                'electric'
+            ));
+            break;
+
+        case 'spread':
+            // 散弹枪 - 三发散射
+            bullets.push(new Bullet(
+                player.x + direction * 30,
+                player.y - 10,
+                direction,
+                'spread'
+            ));
+            bullets.push(new Bullet(
+                player.x + direction * 30,
+                player.y,
+                direction,
+                'spread'
+            ));
+            bullets.push(new Bullet(
+                player.x + direction * 30,
+                player.y + 10,
+                direction,
+                'spread'
+            ));
+            break;
+
+        case 'flame':
+            // 火龙炮 - 大型慢速高伤害
+            bullets.push(new Bullet(
+                player.x + direction * 35,
+                player.y,
+                direction,
+                'flame'
+            ));
+            break;
+
+        default:
+            // 普通炮弹
+            bullets.push(new Bullet(
+                player.x + direction * 30,
+                player.y,
+                direction,
+                'normal'
+            ));
+    }
 
     AudioSys.playFire();
 }
