@@ -3252,7 +3252,6 @@ function drawCircus() {
     ctx.textAlign = 'left';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
-    const passedRings = circusRings.filter(r => r.passed).length;
     ctx.fillText(`🔥 ${passedRings}/${circusRings.length} 个火圈`, 20, 70);
     ctx.shadowBlur = 0;
 
