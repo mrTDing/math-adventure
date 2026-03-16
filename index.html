@@ -3199,18 +3199,27 @@ function initCircus() {
     currentLane = 1; // 重置到中间跑道
 
     // 生成火圈 - 随机出现在3条跑道之一
-    // 1500米赛道，约30秒完成，火圈均匀分散在整个赛道上
-    const totalRings = 5;
-    const trackLength = 1200; // 实际使用赛道长度
-    const startOffset = 200;  // 起始偏移
+    // 1500米赛道，约30秒完成，火圈全程随机出现
+    const totalRings = 10; // 增加火圈数量
+    const minSpacing = 120; // 最小间距，避免过于集中
+    const startOffset = 200; // 起始偏移
+    const endOffset = 1300; // 结束偏移
+
+    let lastX = startOffset;
 
     for (let i = 0; i < totalRings; i++) {
-        // 火圈均匀分布在整个赛道上，加上随机偏移
-        const baseX = startOffset + (i / (totalRings - 1)) * trackLength;
-        const ringX = baseX + (Math.random() - 0.5) * 150; // ±75的随机偏移
+        // 随机间距，确保不会过于集中
+        const spacing = minSpacing + Math.random() * 80; // 120-200米间距
+        const ringX = lastX + spacing;
+
+        // 确保不超过终点
+        if (ringX > endOffset) break;
+
         // 随机选择跑道 0=上, 1=中, 2=下
         const lane = Math.floor(Math.random() * 3);
         circusRings.push(new FireRing(ringX, lane, true));
+
+        lastX = ringX;
     }
 }
 
