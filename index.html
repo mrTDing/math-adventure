@@ -2283,6 +2283,12 @@ class SpecialTransformBox {
         ctx.closePath();
         ctx.fill();
 
+        // 文字标签
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('变身', 0, 38);
+
         ctx.restore();
     }
 }
@@ -2398,11 +2404,17 @@ function initPlatformer() {
     bullets = [];
     lastFireTime = 0;
 
-    // 创建特殊变身箱子（随机位置）
+    // 创建特殊变身箱子（放在固定且明显的位置，方便玩家找到）
     const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
-    const randomX = 2000 + Math.random() * (levelLength - 4000); // 在关卡中间随机位置
-    const randomY = 200 + Math.random() * 200;
-    specialTransformBox = new SpecialTransformBox(randomX, randomY);
+    // 放在关卡约1/4位置，玩家容易到达的地方
+    const boxX = Math.floor(levelLength * 0.25);
+    const boxY = 280; // 放在平台高度，容易看到
+    specialTransformBox = new SpecialTransformBox(boxX, boxY);
+
+    // 显示提示告诉玩家变身箱子的位置
+    setTimeout(() => {
+        showHint(`⚡ 变身箱子在前方 ${Math.floor(boxX * 0.01)}米处！`);
+    }, 2000);
 }
 
 function updateProgressBar() {
@@ -2605,6 +2617,46 @@ function drawPlatformer() {
         ctx.lineTo(flag.x-cam+50, flag.y+20);
         ctx.lineTo(flag.x-cam+8, flag.y+40);
         ctx.fill();
+    }
+
+    // 绘制指向变身箱子的指示器
+    if (specialTransformBox && !specialTransformBox.done && !player.isTransformed) {
+        const boxScreenX = specialTransformBox.x - cam;
+        // 当箱子在屏幕外时显示箭头
+        if (boxScreenX < 0 || boxScreenX > cvs.width) {
+            const arrowX = boxScreenX < 0 ? 30 : cvs.width - 30;
+            const arrowDir = boxScreenX < 0 ? -1 : 1;
+
+            ctx.save();
+            ctx.translate(arrowX, 80);
+            ctx.scale(arrowDir, 1);
+
+            // 发光背景
+            ctx.shadowColor = '#00FFFF';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 箭头
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.moveTo(-10, -15);
+            ctx.lineTo(15, 0);
+            ctx.lineTo(-10, 15);
+            ctx.closePath();
+            ctx.fill();
+
+            // 文字提示
+            ctx.scale(arrowDir, 1);
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('变身!', 0, 35);
+
+            ctx.restore();
+        }
     }
 
     player.draw();
