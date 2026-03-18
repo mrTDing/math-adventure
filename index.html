@@ -449,6 +449,17 @@ const CHARACTERS = [
         face: 'mischievous',
         accessory: 'pitchfork',
         description: '调皮的小恶魔蛋仔'
+    },
+    {
+        id: 'langge',
+        name: '浪哥',
+        emoji: '👑',
+        color: '#FFD700',
+        secondaryColor: '#FFA500',
+        hat: 'crown_gold',
+        face: 'confident',
+        accessory: 'microphone',
+        description: '霸气侧漏的主播蛋仔'
     }
 ];
 
@@ -585,7 +596,7 @@ let player, blocks = [], coins = [], questions = [], flag, cam = 0;
 let items = [], bullets = [];
 let lastFireTime = 0; // 上次发射时间
 const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
-let specialTransformBox = null; // 特殊变身箱子
+let mechaGiftBoxes = []; // 机甲礼物盒子数组
 
 // ==================== 炫卡斗士机甲数据 ====================
 const MECHA_CHARACTERS = [
@@ -2676,56 +2687,81 @@ class BirdEnemy {
     }
 }
 
-// ==================== 特殊变身箱子类 ====================
-class SpecialTransformBox {
+// ==================== 变身礼物盒子类 ====================
+class MechaGiftBox {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.done = false;
         this.pulse = 0;
+        this.bounce = 0;
     }
 
     draw() {
         if (this.done) return;
 
-        this.pulse += 0.1;
-        const glow = Math.sin(this.pulse) * 0.3 + 0.7;
+        this.pulse += 0.08;
+        this.bounce += 0.15;
+        const glow = Math.sin(this.pulse) * 0.4 + 0.8;
+        const bounceY = Math.sin(this.bounce) * 3;
 
         ctx.save();
-        ctx.translate(this.x - cam, this.y);
+        ctx.translate(this.x - cam, this.y + bounceY);
 
         // 发光效果
-        ctx.shadowColor = '#00FFFF';
-        ctx.shadowBlur = 20 * glow;
+        ctx.shadowColor = '#FF69B4';
+        ctx.shadowBlur = 25 * glow;
 
-        // 特殊箱子（青色带闪电）
-        ctx.fillStyle = `rgba(0, 255, 255, ${glow})`;
-        ctx.fillRect(-25, -25, 50, 50);
+        // 礼物盒子主体 - 粉色礼盒
+        const boxGradient = ctx.createLinearGradient(-30, -30, 30, 30);
+        boxGradient.addColorStop(0, '#FF69B4');
+        boxGradient.addColorStop(0.5, '#FF1493');
+        boxGradient.addColorStop(1, '#C71585');
+        ctx.fillStyle = boxGradient;
+        ctx.fillRect(-30, -25, 60, 50);
 
         ctx.shadowBlur = 0;
 
-        // 边框
+        // 礼物盒子金色边框
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 3;
-        ctx.strokeRect(-25, -25, 50, 50);
+        ctx.strokeRect(-30, -25, 60, 50);
 
-        // 闪电图标
+        // 礼物丝带 - 横向
         ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-30, -8, 60, 16);
+
+        // 礼物丝带 - 纵向
+        ctx.fillRect(-8, -25, 16, 50);
+
+        // 蝴蝶结
+        ctx.fillStyle = '#FFD700';
+        // 左蝴蝶结
         ctx.beginPath();
-        ctx.moveTo(-5, -15);
-        ctx.lineTo(8, -2);
-        ctx.lineTo(-2, -2);
-        ctx.lineTo(5, 15);
-        ctx.lineTo(-8, 2);
-        ctx.lineTo(2, 2);
-        ctx.closePath();
+        ctx.ellipse(-15, -25, 12, 8, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        // 右蝴蝶结
+        ctx.beginPath();
+        ctx.ellipse(15, -25, 12, 8, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        // 蝴蝶结中心
+        ctx.beginPath();
+        ctx.arc(0, -25, 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // 文字标签
+        // 机甲图标
         ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 10px Arial';
+        ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('变身', 0, 38);
+        ctx.fillText('🤖', 0, 5);
+
+        // 闪光效果
+        if (glow > 0.9) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(-20, -15, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.restore();
     }
@@ -2842,12 +2878,20 @@ function initPlatformer() {
     bullets = [];
     lastFireTime = 0;
 
-    // 创建特殊变身箱子（放在固定且明显的位置，方便玩家找到）
+    // 创建机甲礼物盒子（2-3个随机位置）
     const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
-    // 放在关卡约1/4位置，玩家容易到达的地方
-    const boxX = Math.floor(levelLength * 0.25);
-    const boxY = 280; // 放在平台高度，容易看到
-    specialTransformBox = new SpecialTransformBox(boxX, boxY);
+    const numGiftBoxes = 2 + Math.floor(Math.random() * 2); // 2或3个
+    mechaGiftBoxes = [];
+
+    for (let i = 0; i < numGiftBoxes; i++) {
+        // 随机位置：从关卡1/5开始到4/5结束，避免起点和终点太近
+        const minX = levelLength * 0.15;
+        const maxX = levelLength * 0.85;
+        const boxX = minX + Math.random() * (maxX - minX);
+        // 随机高度：地面上或平台上
+        const boxY = Math.random() > 0.5 ? 280 : 200 + Math.random() * 100;
+        mechaGiftBoxes.push(new MechaGiftBox(boxX, boxY));
+    }
 }
 
 function updateProgressBar() {
@@ -2956,14 +3000,14 @@ function updatePlatformer(timestamp) {
         }
     }
 
-    // 特殊变身箱子碰撞检测
-    if (specialTransformBox && !specialTransformBox.done) {
-        if (Math.hypot(player.x - specialTransformBox.x, player.y - specialTransformBox.y) < 45) {
-            specialTransformBox.done = true;
+    // 机甲礼物盒子碰撞检测
+    for (let box of mechaGiftBoxes) {
+        if (!box.done && Math.hypot(player.x - box.x, player.y - box.y) < 45) {
+            box.done = true;
             player.isTransformed = true;
-            // 永久变身，直到获取新道具或被击败
             AudioSys.playTransform();
             showTransformSelection();
+            break;
         }
     }
 
@@ -3021,8 +3065,8 @@ function drawPlatformer() {
     for (let b of bullets) b.draw();
     for (let q of questions) q.draw();
 
-    // 绘制特殊变身箱子
-    if (specialTransformBox) specialTransformBox.draw();
+    // 绘制机甲礼物盒子
+    for (let box of mechaGiftBoxes) box.draw();
 
     // 旗帜 - 如果强制解锁模式且箱子未全开，显示锁定
     const isLocked = requireAllBoxes && unlockedBoxes < totalBoxes;
@@ -3052,43 +3096,57 @@ function drawPlatformer() {
         ctx.fill();
     }
 
-    // 绘制指向变身箱子的指示器
-    if (specialTransformBox && !specialTransformBox.done && !player.isTransformed) {
-        const boxScreenX = specialTransformBox.x - cam;
-        // 当箱子在屏幕外时显示箭头
-        if (boxScreenX < 0 || boxScreenX > cvs.width) {
-            const arrowX = boxScreenX < 0 ? 30 : cvs.width - 30;
-            const arrowDir = boxScreenX < 0 ? -1 : 1;
+    // 绘制指向礼物盒子的指示器（指向最近的一个未开启的盒子）
+    if (!player.isTransformed) {
+        // 找到最近的未开启礼物盒子
+        let nearestBox = null;
+        let nearestDist = Infinity;
+        for (let box of mechaGiftBoxes) {
+            if (!box.done) {
+                const dist = Math.abs(box.x - player.x);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestBox = box;
+                }
+            }
+        }
 
-            ctx.save();
-            ctx.translate(arrowX, 80);
-            ctx.scale(arrowDir, 1);
+        if (nearestBox) {
+            const boxScreenX = nearestBox.x - cam;
+            // 当盒子在屏幕外时显示箭头
+            if (boxScreenX < 0 || boxScreenX > cvs.width) {
+                const arrowX = boxScreenX < 0 ? 30 : cvs.width - 30;
+                const arrowDir = boxScreenX < 0 ? -1 : 1;
 
-            // 发光背景
-            ctx.shadowColor = '#00FFFF';
-            ctx.shadowBlur = 15;
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-            ctx.beginPath();
-            ctx.arc(0, 0, 25, 0, Math.PI * 2);
-            ctx.fill();
+                ctx.save();
+                ctx.translate(arrowX, 80);
+                ctx.scale(arrowDir, 1);
 
-            // 箭头
-            ctx.fillStyle = '#00FFFF';
-            ctx.beginPath();
-            ctx.moveTo(-10, -15);
-            ctx.lineTo(15, 0);
-            ctx.lineTo(-10, 15);
-            ctx.closePath();
-            ctx.fill();
+                // 发光背景（粉色，配合礼物盒子）
+                ctx.shadowColor = '#FF69B4';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.3)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fill();
 
-            // 文字提示
-            ctx.scale(arrowDir, 1);
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('变身!', 0, 35);
+                // 箭头
+                ctx.fillStyle = '#FF69B4';
+                ctx.beginPath();
+                ctx.moveTo(-10, -15);
+                ctx.lineTo(15, 0);
+                ctx.lineTo(-10, 15);
+                ctx.closePath();
+                ctx.fill();
 
-            ctx.restore();
+                // 礼物图标
+                ctx.scale(arrowDir, 1);
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🎁', 0, 5);
+
+                ctx.restore();
+            }
         }
     }
 
