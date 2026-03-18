@@ -140,6 +140,7 @@
                 <button onclick="startElimination()">🧩 数字消消乐</button>
                 <button onclick="startCircus()">🎪 马戏团跳火圈</button>
             </div>
+            <button onclick="toggleMuteFromStart()" id="muteBtn" style="margin-top: 15px; font-size: 16px; padding: 8px 20px;">🔊 音效: 开</button>
             <div id="tips">
                 <p>⬅️➡️ 移动 | 空格/⬆️ 跳跃(可二段跳)</p>
                 <p>F键/🔥发射炮弹打怪兽 | 顶问号答题 | 找⚡变身炫蓝雷霆 | 吃糖果 | 到旗帜过关！</p>
@@ -211,6 +212,7 @@
             <h1>⏸️ 游戏暂停</h1>
             <div>
                 <button onclick="resumeGame()">▶️ 继续游戏</button>
+                <button onclick="toggleMuteFromPause()" id="pauseMuteBtn">🔊 音效</button>
                 <button class="btn-small" onclick="backToMenu()">← 返回主菜单</button>
             </div>
         </div>
@@ -239,7 +241,13 @@
 const AudioSys = {
     ctx: null, isMuted: false, bgmOscillators: [], bgmGain: null, isBGMPlaying: false,
     init() {
-        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // 尝试恢复音频上下文（浏览器自动播放策略需要用户交互后才能播放）
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
     },
     playJump() { this.playTone(200, 600, 0.1, 'sine'); },
     playCoin() { this.playTone(1200, 1600, 0.15, 'sine'); },
@@ -268,6 +276,10 @@ const AudioSys = {
     // 背景音乐系统 - 轻松欢快的旋律
     startBGM() {
         if (this.isBGMPlaying || this.isMuted || !this.ctx) return;
+        // 确保音频上下文已恢复
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
         this.isBGMPlaying = true;
         this.bgmGain = this.ctx.createGain();
         this.bgmGain.gain.value = 0.08; // 背景音量较小
@@ -2165,6 +2177,18 @@ function selectSetting(id) {
 function confirmSettings() {
     document.getElementById('settingsSelect').style.display = 'none';
     startGameAfterSelection();
+}
+
+// ==================== 音效控制 ====================
+function toggleMuteFromStart() {
+    AudioSys.init();
+    const isMuted = AudioSys.toggleMute();
+    const btn = document.getElementById('muteBtn');
+    btn.textContent = isMuted ? '🔇 音效: 关' : '🔊 音效: 开';
+    // 如果开启音效，播放一个测试音
+    if (!isMuted) {
+        AudioSys.playClick();
+    }
 }
 
 // ==================== 糖果/金币类 ====================
@@ -4562,7 +4586,17 @@ function closeVictory() {
 }
 
 function pauseGame() {
-    if (state === 'play') { state = 'pause'; document.getElementById('pause').style.display = 'flex'; }
+    if (state === 'play') {
+        state = 'pause';
+        document.getElementById('pause').style.display = 'flex';
+        // 暂停时停止背景音乐
+        AudioSys.stopBGM();
+        // 更新音效按钮状态
+        const pauseMuteBtn = document.getElementById('pauseMuteBtn');
+        if (pauseMuteBtn) {
+            pauseMuteBtn.textContent = AudioSys.isMuted ? '🔇 音效' : '🔊 音效';
+        }
+    }
 }
 
 function resumeGame() {
@@ -4570,8 +4604,21 @@ function resumeGame() {
         state = 'play';
         document.getElementById('pause').style.display = 'none';
         lastTime = 0;
+        // 恢复时重新启动背景音乐
+        AudioSys.startBGM();
         if (gameMode === 'platformer') loop();
         else if (gameMode === 'elimination') elimLoop();
+    }
+}
+
+function toggleMuteFromPause() {
+    const isMuted = AudioSys.toggleMute();
+    const btn = document.getElementById('pauseMuteBtn');
+    btn.textContent = isMuted ? '🔇 音效' : '🔊 音效';
+    // 同步开始界面的按钮状态
+    const startBtn = document.getElementById('muteBtn');
+    if (startBtn) {
+        startBtn.textContent = isMuted ? '🔇 音效: 关' : '🔊 音效: 开';
     }
 }
 
