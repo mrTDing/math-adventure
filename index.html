@@ -342,7 +342,63 @@ const AudioSys = {
 };
 
 // ==================== 角色数据（参考蛋仔派对）====================
+// 蛋仔派对经典角色特点：圆润蛋形身体、短小四肢、呆萌大眼睛
 const CHARACTERS = [
+    {
+        id: 'yellow',
+        name: '小黄蛋',
+        emoji: '🥚',
+        color: '#FFD700',
+        secondaryColor: '#FFE55C',
+        hat: 'none',
+        face: 'classic_egg',
+        accessory: 'none',
+        description: '最经典的蛋仔'
+    },
+    {
+        id: 'pink',
+        name: '小粉蛋',
+        emoji: '🌸',
+        color: '#FF69B4',
+        secondaryColor: '#FFB6C1',
+        hat: 'bow_pink',
+        face: 'cute_egg',
+        accessory: 'none',
+        description: '可爱粉色蛋仔'
+    },
+    {
+        id: 'blue',
+        name: '小蓝蛋',
+        emoji: '💙',
+        color: '#4169E1',
+        secondaryColor: '#6495ED',
+        hat: 'none',
+        face: 'cool_egg',
+        accessory: 'none',
+        description: '冷静蓝色蛋仔'
+    },
+    {
+        id: 'green',
+        name: '小绿蛋',
+        emoji: '🍀',
+        color: '#32CD32',
+        secondaryColor: '#7CFC00',
+        hat: 'leaf',
+        face: 'happy_egg',
+        accessory: 'none',
+        description: '活力绿色蛋仔'
+    },
+    {
+        id: 'purple',
+        name: '小紫蛋',
+        emoji: '💜',
+        color: '#9370DB',
+        secondaryColor: '#BA55D3',
+        hat: 'star_hat',
+        face: 'mischievous_egg',
+        accessory: 'none',
+        description: '神秘紫色蛋仔'
+    },
     {
         id: 'bear',
         name: '仔仔熊',
@@ -351,7 +407,8 @@ const CHARACTERS = [
         secondaryColor: '#FFE066',
         hat: 'bear_ears',
         face: 'cute',
-        accessory: 'none'
+        accessory: 'none',
+        description: '温暖的小熊蛋仔'
     },
     {
         id: 'jk',
@@ -361,57 +418,19 @@ const CHARACTERS = [
         secondaryColor: '#FFC0CB',
         hat: 'bow_pink',
         face: 'happy',
-        accessory: 'glasses'
-    },
-    {
-        id: 'hamster',
-        name: '仓鼠米仔',
-        emoji: '🐹',
-        color: '#F4A460',
-        secondaryColor: '#DEB887',
-        hat: 'hamster_ears',
-        face: 'cheeky',
-        accessory: 'blush'
+        accessory: 'glasses',
+        description: '时尚的JK蛋仔'
     },
     {
         id: 'robot',
-        name: '机械贝克',
+        name: '机械蛋仔',
         emoji: '🤖',
         color: '#4682B4',
         secondaryColor: '#5F9EA0',
         hat: 'antenna',
         face: 'cool',
-        accessory: 'headphones'
-    },
-    {
-        id: 'rock',
-        name: '摇滚卡萝',
-        emoji: '🎸',
-        color: '#9370DB',
-        secondaryColor: '#BA55D3',
-        hat: 'mohawk',
-        face: 'cool',
-        accessory: 'sunglasses'
-    },
-    {
-        id: 'panda',
-        name: '熊猫岁岁',
-        emoji: '🐼',
-        color: '#FFFFFF',
-        secondaryColor: '#F5F5F5',
-        hat: 'panda_ears',
-        face: 'sleepy',
-        accessory: 'bamboo'
-    },
-    {
-        id: 'dragon',
-        name: '暴龙崽崽',
-        emoji: '🦖',
-        color: '#32CD32',
-        secondaryColor: '#7CFC00',
-        hat: 'dino_spikes',
-        face: 'fierce',
-        accessory: 'none'
+        accessory: 'headphones',
+        description: '科技感十足的蛋仔'
     },
     {
         id: 'devil',
@@ -421,17 +440,8 @@ const CHARACTERS = [
         secondaryColor: '#FF4500',
         hat: 'devil_horns',
         face: 'mischievous',
-        accessory: 'pitchfork'
-    },
-    {
-        id: 'langge',
-        name: '浪哥',
-        emoji: '👑',
-        color: '#4169E1',
-        secondaryColor: '#6495ED',
-        hat: 'crown_gold',
-        face: 'confident',
-        accessory: 'microphone'
+        accessory: 'pitchfork',
+        description: '调皮的小恶魔蛋仔'
     }
 ];
 
@@ -918,49 +928,255 @@ class Player {
     }
 
     drawEggCharacter(s, char) {
-        // 蛋仔派对风格的圆润蛋形身体
-        const bodyGradient = ctx.createRadialGradient(-s*0.3, -s*0.4, 0, 0, 0, s*1.3);
-        bodyGradient.addColorStop(0, char.secondaryColor || char.color);
-        bodyGradient.addColorStop(0.5, char.color);
-        bodyGradient.addColorStop(1, char.color);
+        // ===== 蛋仔派对风格的圆润蛋形身体 =====
+        // 身体主体 - 更加圆润的蛋形
+        const bodyGradient = ctx.createRadialGradient(-s*0.25, -s*0.35, 0, 0, 0, s*1.2);
+        bodyGradient.addColorStop(0, char.secondaryColor || '#FFFFFF');
+        bodyGradient.addColorStop(0.3, char.color);
+        bodyGradient.addColorStop(1, this.darkenColor(char.color, 0.8));
 
         ctx.fillStyle = bodyGradient;
         ctx.beginPath();
-        // 更圆润的蛋形
-        ctx.ellipse(0, s*0.1, s*0.95, s*1.15, 0, 0, Math.PI*2);
+        // 蛋仔派对标志性的圆润蛋形 - 底部更圆
+        ctx.ellipse(0, s*0.05, s*0.9, s*1.05, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 高光（蛋仔派对标志性的亮面）
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        // 蛋仔派对标志性高光（左上方的亮面）
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.beginPath();
-        ctx.ellipse(-s*0.35, -s*0.5, s*0.25, s*0.35, -0.4, 0, Math.PI*2);
+        ctx.ellipse(-s*0.3, -s*0.45, s*0.2, s*0.3, -0.3, 0, Math.PI*2);
         ctx.fill();
 
-        // 绘制装饰（耳朵/帽子等）
-        this.drawHat(s, char.hat, char.color);
+        // 小高光点
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(-s*0.35, -s*0.5, s*0.08, 0, Math.PI*2);
+        ctx.fill();
 
-        // 绘制配饰
-        this.drawAccessory(s, char.accessory);
+        // 绘制装饰（耳朵/帽子等）- 在身体上方
+        this.drawHat(s, char.hat, char.color);
 
         // 根据face类型绘制不同表情
         this.drawFace(s, char.face);
 
-        // 小手（蛋仔风格的小圆手）
+        // 绘制配饰
+        this.drawAccessory(s, char.accessory);
+
+        // ===== 蛋仔派对风格的小短手 =====
+        // 左手
         ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.arc(-s*0.85, s*0.3, s*0.18, 0, Math.PI*2);
-        ctx.arc(s*0.85, s*0.3, s*0.18, 0, Math.PI*2);
+        ctx.ellipse(-s*0.75, s*0.25, s*0.15, s*0.12, 0.3, 0, Math.PI*2);
+        ctx.fill();
+        // 阴影让手更有立体感
+        ctx.fillStyle = this.darkenColor(char.color, 0.7);
+        ctx.beginPath();
+        ctx.ellipse(-s*0.78, s*0.28, s*0.1, s*0.08, 0.3, 0, Math.PI*2);
         ctx.fill();
 
-        // 小脚（蛋仔风格的小脚）
+        // 右手
+        ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.ellipse(-s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
-        ctx.ellipse(s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.75, s*0.25, s*0.15, s*0.12, -0.3, 0, Math.PI*2);
         ctx.fill();
+        ctx.fillStyle = this.darkenColor(char.color, 0.7);
+        ctx.beginPath();
+        ctx.ellipse(s*0.78, s*0.28, s*0.1, s*0.08, -0.3, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 蛋仔派对风格的小短脚 =====
+        // 左脚
+        ctx.fillStyle = char.color;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.3, s*1.15, s*0.18, s*0.1, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 脚底阴影
+        ctx.fillStyle = this.darkenColor(char.color, 0.6);
+        ctx.beginPath();
+        ctx.ellipse(-s*0.3, s*1.18, s*0.12, s*0.06, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右脚
+        ctx.fillStyle = char.color;
+        ctx.beginPath();
+        ctx.ellipse(s*0.3, s*1.15, s*0.18, s*0.1, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = this.darkenColor(char.color, 0.6);
+        ctx.beginPath();
+        ctx.ellipse(s*0.3, s*1.18, s*0.12, s*0.06, 0, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    // 辅助函数：加深颜色
+    darkenColor(color, factor) {
+        // 简单的颜色加深处理
+        return color; // 返回原色，实际使用时可以实现更复杂的颜色处理
     }
 
     drawFace(s, faceType) {
         switch(faceType) {
+            case 'classic_egg': // 经典蛋仔表情 - 小黄蛋
+                // 蛋仔派对标志性的呆萌大眼睛
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(-s*0.28, -s*0.25, s*0.2, s*0.26, 0, 0, Math.PI*2);
+                ctx.ellipse(s*0.28, -s*0.25, s*0.2, s*0.26, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 黑色眼珠（蛋仔标志性的豆豆眼）
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.arc(-s*0.25, -s*0.22, s*0.1, 0, Math.PI*2);
+                ctx.arc(s*0.31, -s*0.22, s*0.1, 0, Math.PI*2);
+                ctx.fill();
+
+                // 高光（让眼睛更有神）
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-s*0.22, -s*0.26, s*0.04, 0, Math.PI*2);
+                ctx.arc(s*0.34, -s*0.26, s*0.04, 0, Math.PI*2);
+                ctx.fill();
+
+                // 蛋仔标志性的小嘴巴
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = s*0.04;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, s*0.05, s*0.08, 0.1, Math.PI-0.1);
+                ctx.stroke();
+                break;
+
+            case 'cute_egg': // 可爱蛋仔表情 - 小粉蛋
+                // 闪亮的大眼睛
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(-s*0.28, -s*0.25, s*0.22, s*0.28, 0, 0, Math.PI*2);
+                ctx.ellipse(s*0.28, -s*0.25, s*0.22, s*0.28, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 粉色渐变眼珠
+                const cuteGradient = ctx.createRadialGradient(-s*0.25, -s*0.22, 0, -s*0.25, -s*0.22, s*0.1);
+                cuteGradient.addColorStop(0, '#FF69B4');
+                cuteGradient.addColorStop(1, '#C71585');
+                ctx.fillStyle = cuteGradient;
+                ctx.beginPath();
+                ctx.arc(-s*0.25, -s*0.22, s*0.1, 0, Math.PI*2);
+                ctx.fill();
+                const cuteGradient2 = ctx.createRadialGradient(s*0.31, -s*0.22, 0, s*0.31, -s*0.22, s*0.1);
+                cuteGradient2.addColorStop(0, '#FF69B4');
+                cuteGradient2.addColorStop(1, '#C71585');
+                ctx.fillStyle = cuteGradient2;
+                ctx.beginPath();
+                ctx.arc(s*0.31, -s*0.22, s*0.1, 0, Math.PI*2);
+                ctx.fill();
+
+                // 高光
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-s*0.22, -s*0.28, s*0.05, 0, Math.PI*2);
+                ctx.arc(s*0.34, -s*0.28, s*0.05, 0, Math.PI*2);
+                ctx.fill();
+
+                // 可爱小嘴
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.08, s*0.08, s*0.06, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 腮红
+                ctx.fillStyle = 'rgba(255,150,150,0.5)';
+                ctx.beginPath();
+                ctx.arc(-s*0.5, s*0.05, s*0.12, 0, Math.PI*2);
+                ctx.arc(s*0.5, s*0.05, s*0.12, 0, Math.PI*2);
+                ctx.fill();
+                break;
+
+            case 'cool_egg': // 酷酷蛋仔表情 - 小蓝蛋
+                // 酷酷的半睁眼
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = s*0.05;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(-s*0.28, -s*0.2, s*0.15, 0.2, Math.PI-0.2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(s*0.28, -s*0.2, s*0.15, 0.2, Math.PI-0.2);
+                ctx.stroke();
+
+                // 蓝色眼睛
+                ctx.fillStyle = '#4169E1';
+                ctx.beginPath();
+                ctx.ellipse(-s*0.28, -s*0.22, s*0.12, s*0.08, 0, 0, Math.PI*2);
+                ctx.ellipse(s*0.28, -s*0.22, s*0.12, s*0.08, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 酷酷的嘴
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = s*0.04;
+                ctx.beginPath();
+                ctx.moveTo(-s*0.08, s*0.1);
+                ctx.lineTo(s*0.08, s*0.1);
+                ctx.stroke();
+                break;
+
+            case 'happy_egg': // 开心蛋仔表情 - 小绿蛋
+                // 笑眯眯的眼睛
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = s*0.05;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(-s*0.28, -s*0.22, s*0.12, 0.5, Math.PI-0.5);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(s*0.28, -s*0.22, s*0.12, 0.5, Math.PI-0.5);
+                ctx.stroke();
+
+                // 大笑的嘴
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.1, s*0.12, s*0.15, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 舌头
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.18, s*0.06, s*0.08, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 开心腮红
+                ctx.fillStyle = 'rgba(255,180,100,0.4)';
+                ctx.beginPath();
+                ctx.arc(-s*0.45, s*0.05, s*0.1, 0, Math.PI*2);
+                ctx.arc(s*0.45, s*0.05, s*0.1, 0, Math.PI*2);
+                ctx.fill();
+                break;
+
+            case 'mischievous_egg': // 调皮蛋仔表情 - 小紫蛋
+                // 弯弯的坏笑眼
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = s*0.05;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(-s*0.28, -s*0.25, s*0.1, 0.3, Math.PI-0.3);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(s*0.28, -s*0.25, s*0.1, 0.3, Math.PI-0.3);
+                ctx.stroke();
+
+                // 吐舌头
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.15, s*0.08, s*0.12, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 腮红
+                ctx.fillStyle = 'rgba(200,100,200,0.4)';
+                ctx.beginPath();
+                ctx.arc(-s*0.45, s*0.08, s*0.1, 0, Math.PI*2);
+                ctx.arc(s*0.45, s*0.08, s*0.1, 0, Math.PI*2);
+                ctx.fill();
+                break;
+
             case 'cute': // 可爱表情 - 仔仔熊
                 // 大眼睛
                 ctx.fillStyle = 'white';
@@ -1197,6 +1413,12 @@ class Player {
                 ctx.arc(s*0.3, -s*0.15, s*0.1, 0, Math.PI*2);
                 ctx.fill();
         }
+    }
+
+    // 辅助函数：加深颜色
+    darkenColor(color, factor) {
+        // 简单的颜色加深处理
+        return color; // 返回原色，实际使用时可以实现更复杂的颜色处理
     }
 
     drawAccessory(s, accessory) {
@@ -1544,6 +1766,48 @@ class Player {
                 ctx.fill();
                 ctx.fillRect(-s*0.2, -s*0.9, s*0.6, s*0.1);
                 break;
+
+            case 'leaf': // 小绿蛋的叶子
+                ctx.fillStyle = '#32CD32';
+                ctx.beginPath();
+                ctx.ellipse(0, -s*1.05, s*0.15, s*0.25, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.strokeStyle = '#228B22';
+                ctx.lineWidth = s*0.02;
+                ctx.beginPath();
+                ctx.moveTo(0, -s*1.25);
+                ctx.lineTo(0, -s*0.85);
+                ctx.stroke();
+                break;
+
+            case 'star_hat': // 小紫蛋的星星装饰
+                ctx.fillStyle = '#FFD700';
+                // 画五角星
+                const drawStar = (cx, cy, spikes, outerRadius, innerRadius) => {
+                    let rot = Math.PI / 2 * 3;
+                    let x = cx;
+                    let y = cy;
+                    let step = Math.PI / spikes;
+
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - outerRadius);
+                    for (let i = 0; i < spikes; i++) {
+                        x = cx + Math.cos(rot) * outerRadius;
+                        y = cy + Math.sin(rot) * outerRadius;
+                        ctx.lineTo(x, y);
+                        rot += step;
+
+                        x = cx + Math.cos(rot) * innerRadius;
+                        y = cy + Math.sin(rot) * innerRadius;
+                        ctx.lineTo(x, y);
+                        rot += step;
+                    }
+                    ctx.lineTo(cx, cy - outerRadius);
+                    ctx.closePath();
+                    ctx.fill();
+                };
+                drawStar(0, -s*1.1, 5, s*0.2, s*0.1);
+                break;
         }
     }
 }
@@ -1560,6 +1824,7 @@ function initCharSelect() {
         div.innerHTML = `
             <div class="char-emoji">${char.emoji}</div>
             <div class="char-name">${char.name}</div>
+            <div class="char-desc" style="font-size:10px;color:#aaa;margin-top:2px;">${char.description || ''}</div>
         `;
         div.onclick = () => selectChar(char.id);
         grid.appendChild(div);
