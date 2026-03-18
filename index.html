@@ -215,6 +215,13 @@
             </div>
         </div>
 
+        <!-- 机甲选择界面 -->
+        <div id="mechaSelect" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 300;">
+            <h1 style="font-size: 32px; margin-bottom: 10px; text-shadow: 0 0 20px #00FFFF;">⚡ 选择你的机甲 ⚡</h1>
+            <p style="font-size: 14px; color: #aaa; margin-bottom: 20px;">变身时间：10秒</p>
+            <div id="mechaGrid" style="display: flex; gap: 20px; margin: 20px 0;"></div>
+        </div>
+
         <div id="touch">
             <div style="display: flex; gap: 10px;">
                 <div class="tbtn" id="l">⬅️</div>
@@ -580,6 +587,56 @@ let lastFireTime = 0; // 上次发射时间
 const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
 let specialTransformBox = null; // 特殊变身箱子
 
+// ==================== 炫卡斗士机甲数据 ====================
+const MECHA_CHARACTERS = [
+    {
+        id: 'xuanlan',
+        name: '炫蓝雷霆王',
+        emoji: '⚡',
+        color: '#00CED1',
+        secondaryColor: '#008B8B',
+        type: 'lightning',
+        description: '雷电之力，速度型机甲'
+    },
+    {
+        id: 'chilian',
+        name: '赤炼重魂王',
+        emoji: '🔥',
+        color: '#DC143C',
+        secondaryColor: '#8B0000',
+        type: 'flame',
+        description: '火焰之力，攻击型机甲'
+    },
+    {
+        id: 'xuantie',
+        name: '玄铁战神',
+        emoji: '🛡️',
+        color: '#4A4A4A',
+        secondaryColor: '#2F2F2F',
+        type: 'defense',
+        description: '钢铁之躯，防御型机甲'
+    },
+    {
+        id: 'qingfeng',
+        name: '青锋战王',
+        emoji: '⚔️',
+        color: '#32CD32',
+        secondaryColor: '#228B22',
+        type: 'wind',
+        description: '疾风之力，敏捷型机甲'
+    },
+    {
+        id: 'canglong',
+        name: '苍龙皇',
+        emoji: '🐉',
+        color: '#4169E1',
+        secondaryColor: '#1E90FF',
+        type: 'water',
+        description: '深海之力，均衡型机甲'
+    }
+];
+let currentMecha = null; // 当前变身的机甲
+
 // 道具类型
 // 玩家火力状态
 let playerFireMode = 'normal'; // normal, electric, spread, flame
@@ -677,8 +734,15 @@ class Player {
             this.flashFrame = (this.flashFrame + 1) % 10;
         }
 
-        // 变身和火力模式现在为永久效果，直到获取新道具或被击败
-        // 不再自动倒计时
+        // 变身倒计时（10秒体验）
+        if (this.transformTimer > 0) {
+            this.transformTimer--;
+            if (this.transformTimer <= 0) {
+                this.isTransformed = false;
+                currentMecha = null;
+                showHint('变身结束！');
+            }
+        }
     }
 
     draw() {
@@ -693,7 +757,7 @@ class Player {
 
         // 如果处于变身状态，绘制炫蓝雷霆
         if (this.isTransformed) {
-            this.drawXuanBlueThunder(s);
+            this.drawMecha(s);
         } else {
             const char = selectedChar || CHARACTERS[0];
 
@@ -929,28 +993,28 @@ class Player {
 
     drawEggCharacter(s, char) {
         // ===== 蛋仔派对风格的圆润蛋形身体 =====
-        // 身体主体 - 更加圆润的蛋形
-        const bodyGradient = ctx.createRadialGradient(-s*0.25, -s*0.35, 0, 0, 0, s*1.2);
+        // 身体主体 - 更接近正圆的蛋形
+        const bodyGradient = ctx.createRadialGradient(-s*0.2, -s*0.25, 0, 0, 0, s*1.1);
         bodyGradient.addColorStop(0, char.secondaryColor || '#FFFFFF');
         bodyGradient.addColorStop(0.3, char.color);
-        bodyGradient.addColorStop(1, this.darkenColor(char.color, 0.8));
+        bodyGradient.addColorStop(1, char.color);
 
         ctx.fillStyle = bodyGradient;
         ctx.beginPath();
-        // 蛋仔派对标志性的圆润蛋形 - 底部更圆
-        ctx.ellipse(0, s*0.05, s*0.9, s*1.05, 0, 0, Math.PI*2);
+        // 蛋仔派对标志性的圆润蛋形 - 更接近圆形
+        ctx.ellipse(0, 0, s*0.85, s*0.9, 0, 0, Math.PI*2);
         ctx.fill();
 
         // 蛋仔派对标志性高光（左上方的亮面）
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
         ctx.beginPath();
-        ctx.ellipse(-s*0.3, -s*0.45, s*0.2, s*0.3, -0.3, 0, Math.PI*2);
+        ctx.ellipse(-s*0.25, -s*0.35, s*0.18, s*0.25, -0.4, 0, Math.PI*2);
         ctx.fill();
 
         // 小高光点
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.beginPath();
-        ctx.arc(-s*0.35, -s*0.5, s*0.08, 0, Math.PI*2);
+        ctx.arc(-s*0.3, -s*0.4, s*0.06, 0, Math.PI*2);
         ctx.fill();
 
         // 绘制装饰（耳朵/帽子等）- 在身体上方
@@ -962,48 +1026,48 @@ class Player {
         // 绘制配饰
         this.drawAccessory(s, char.accessory);
 
-        // ===== 蛋仔派对风格的小短手 =====
-        // 左手
+        // ===== 蛋仔派对风格的小短手（更明显） =====
+        // 左手 - 短小圆润，更突出
         ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.ellipse(-s*0.75, s*0.25, s*0.15, s*0.12, 0.3, 0, Math.PI*2);
+        ctx.arc(-s*0.75, s*0.15, s*0.2, 0, Math.PI*2);
         ctx.fill();
-        // 阴影让手更有立体感
-        ctx.fillStyle = this.darkenColor(char.color, 0.7);
+        // 手掌高光
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
-        ctx.ellipse(-s*0.78, s*0.28, s*0.1, s*0.08, 0.3, 0, Math.PI*2);
+        ctx.arc(-s*0.72, s*0.12, s*0.08, 0, Math.PI*2);
         ctx.fill();
 
         // 右手
         ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.ellipse(s*0.75, s*0.25, s*0.15, s*0.12, -0.3, 0, Math.PI*2);
+        ctx.arc(s*0.75, s*0.15, s*0.2, 0, Math.PI*2);
         ctx.fill();
-        ctx.fillStyle = this.darkenColor(char.color, 0.7);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
-        ctx.ellipse(s*0.78, s*0.28, s*0.1, s*0.08, -0.3, 0, Math.PI*2);
+        ctx.arc(s*0.72, s*0.12, s*0.08, 0, Math.PI*2);
         ctx.fill();
 
-        // ===== 蛋仔派对风格的小短脚 =====
-        // 左脚
+        // ===== 蛋仔派对风格的小短脚（更明显） =====
+        // 左脚 - 短粗圆润
         ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.ellipse(-s*0.3, s*1.15, s*0.18, s*0.1, 0, 0, Math.PI*2);
+        ctx.ellipse(-s*0.35, s*0.95, s*0.22, s*0.18, 0, 0, Math.PI*2);
         ctx.fill();
-        // 脚底阴影
-        ctx.fillStyle = this.darkenColor(char.color, 0.6);
+        // 脚底
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.beginPath();
-        ctx.ellipse(-s*0.3, s*1.18, s*0.12, s*0.06, 0, 0, Math.PI*2);
+        ctx.ellipse(-s*0.35, s*0.95, s*0.15, s*0.12, 0, 0, Math.PI*2);
         ctx.fill();
 
         // 右脚
         ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.ellipse(s*0.3, s*1.15, s*0.18, s*0.1, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.35, s*0.95, s*0.22, s*0.18, 0, 0, Math.PI*2);
         ctx.fill();
-        ctx.fillStyle = this.darkenColor(char.color, 0.6);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.beginPath();
-        ctx.ellipse(s*0.3, s*1.18, s*0.12, s*0.06, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.35, s*0.95, s*0.15, s*0.12, 0, 0, Math.PI*2);
         ctx.fill();
     }
 
@@ -1516,108 +1580,217 @@ class Player {
         }
     }
 
-    drawXuanBlueThunder(s) {
-        // 炫蓝雷霆 - 炫卡斗士风格的机甲战士
-        // 身体（蓝色机甲风格）
-        const bodyGradient = ctx.createRadialGradient(-s*0.2, -s*0.3, 0, 0, 0, s*1.2);
-        bodyGradient.addColorStop(0, '#00CED1');
-        bodyGradient.addColorStop(0.5, '#008B8B');
-        bodyGradient.addColorStop(1, '#006666');
+    drawMecha(s) {
+        // 根据当前机甲类型绘制不同的炫卡斗士风格机甲
+        const mecha = currentMecha || MECHA_CHARACTERS[0];
+        const color = mecha.color;
+        const secondaryColor = mecha.secondaryColor;
+        const type = mecha.type;
 
-        ctx.fillStyle = bodyGradient;
-        ctx.beginPath();
-        ctx.ellipse(0, s*0.1, s*0.9, s*1.1, 0, 0, Math.PI*2);
-        ctx.fill();
+        ctx.save();
 
-        // 机甲装甲线条
-        ctx.strokeStyle = '#00FFFF';
-        ctx.lineWidth = s*0.03;
-        ctx.beginPath();
-        ctx.moveTo(-s*0.5, -s*0.5);
-        ctx.lineTo(s*0.5, -s*0.5);
-        ctx.moveTo(-s*0.4, -s*0.2);
-        ctx.lineTo(s*0.4, -s*0.2);
-        ctx.stroke();
+        // 机甲发光效果
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
 
-        // 胸口能量核心（发光）
-        ctx.fillStyle = '#00FFFF';
-        ctx.shadowColor = '#00FFFF';
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(0, s*0.1, s*0.15, 0, Math.PI*2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        // ===== 机甲头部 =====
+        // 头盔主体
+        const headGradient = ctx.createLinearGradient(0, -s*0.8, 0, -s*0.3);
+        headGradient.addColorStop(0, color);
+        headGradient.addColorStop(0.5, secondaryColor);
+        headGradient.addColorStop(1, color);
 
-        // 眼睛（红色发光）
-        ctx.fillStyle = '#FF0000';
-        ctx.shadowColor = '#FF0000';
-        ctx.shadowBlur = 10;
+        ctx.fillStyle = headGradient;
         ctx.beginPath();
-        ctx.ellipse(-s*0.3, -s*0.15, s*0.15, s*0.1, 0, 0, Math.PI*2);
-        ctx.ellipse(s*0.3, -s*0.15, s*0.15, s*0.1, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // 雷电标志（额头）
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.moveTo(-s*0.1, -s*0.5);
-        ctx.lineTo(s*0.05, -s*0.4);
-        ctx.lineTo(-s*0.05, -s*0.4);
-        ctx.lineTo(s*0.1, -s*0.3);
-        ctx.lineTo(s*0, -s*0.3);
-        ctx.lineTo(s*0.05, -s*0.25);
-        ctx.lineTo(-s*0.1, -s*0.35);
-        ctx.lineTo(s*0, -s*0.35);
+        ctx.moveTo(-s*0.5, -s*0.3);
+        ctx.quadraticCurveTo(-s*0.6, -s*0.8, 0, -s*0.9);
+        ctx.quadraticCurveTo(s*0.6, -s*0.8, s*0.5, -s*0.3);
         ctx.closePath();
         ctx.fill();
 
-        // 机甲肩甲
-        ctx.fillStyle = '#4682B4';
+        // 头部装甲线条
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = s*0.02;
         ctx.beginPath();
-        ctx.moveTo(-s*0.8, -s*0.2);
-        ctx.lineTo(-s*1.1, s*0.2);
-        ctx.lineTo(-s*0.7, s*0.3);
-        ctx.lineTo(-s*0.6, -s*0.1);
+        ctx.moveTo(0, -s*0.85);
+        ctx.lineTo(0, -s*0.4);
+        ctx.stroke();
+
+        // ===== 机甲眼睛（发光效果） =====
+        ctx.shadowBlur = 15;
+        const eyeColor = type === 'lightning' ? '#00FFFF' :
+                        type === 'flame' ? '#FF4500' :
+                        type === 'defense' ? '#FFD700' :
+                        type === 'wind' ? '#00FF00' : '#00CED1';
+        ctx.fillStyle = eyeColor;
+        ctx.shadowColor = eyeColor;
+
+        // 左 eye
+        ctx.beginPath();
+        ctx.ellipse(-s*0.25, -s*0.55, s*0.15, s*0.1, -0.2, 0, Math.PI*2);
         ctx.fill();
+        // 右 eye
         ctx.beginPath();
-        ctx.moveTo(s*0.8, -s*0.2);
-        ctx.lineTo(s*1.1, s*0.2);
-        ctx.lineTo(s*0.7, s*0.3);
-        ctx.lineTo(s*0.6, -s*0.1);
+        ctx.ellipse(s*0.25, -s*0.55, s*0.15, s*0.1, 0.2, 0, Math.PI*2);
         ctx.fill();
 
-        // 小手（机甲风格）
-        ctx.fillStyle = '#008B8B';
+        ctx.shadowBlur = 20;
+
+        // ===== 机甲身体 =====
+        // 胸部装甲
+        const bodyGradient = ctx.createLinearGradient(0, -s*0.2, 0, s*0.6);
+        bodyGradient.addColorStop(0, color);
+        bodyGradient.addColorStop(0.3, secondaryColor);
+        bodyGradient.addColorStop(0.7, color);
+        bodyGradient.addColorStop(1, secondaryColor);
+
+        ctx.fillStyle = bodyGradient;
         ctx.beginPath();
-        ctx.arc(-s*0.9, s*0.3, s*0.18, 0, Math.PI*2);
-        ctx.arc(s*0.9, s*0.3, s*0.18, 0, Math.PI*2);
+        // 倒梯形身体
+        ctx.moveTo(-s*0.55, -s*0.2);
+        ctx.lineTo(s*0.55, -s*0.2);
+        ctx.lineTo(s*0.4, s*0.6);
+        ctx.lineTo(-s*0.4, s*0.6);
+        ctx.closePath();
         ctx.fill();
 
-        // 脚（机甲推进器）
-        ctx.fillStyle = '#4682B4';
-        ctx.fillRect(-s*0.45, s*1.1, s*0.3, s*0.3);
-        ctx.fillRect(s*0.15, s*1.1, s*0.3, s*0.3);
-
-        // 推进器火焰效果
-        ctx.fillStyle = `rgba(0, 255, 255, ${0.5 + Math.sin(frameCount * 0.5) * 0.3})`;
+        // 胸甲装甲分割线
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = s*0.03;
         ctx.beginPath();
-        ctx.moveTo(-s*0.3, s*1.4);
-        ctx.lineTo(-s*0.45, s*1.7);
-        ctx.lineTo(-s*0.15, s*1.4);
+        ctx.moveTo(-s*0.3, -s*0.1);
+        ctx.lineTo(s*0.3, -s*0.1);
+        ctx.moveTo(0, -s*0.1);
+        ctx.lineTo(0, s*0.5);
+        ctx.stroke();
+
+        // ===== 能量核心 =====
+        ctx.shadowColor = eyeColor;
+        ctx.shadowBlur = 25;
+        ctx.fillStyle = eyeColor;
+        ctx.beginPath();
+        ctx.arc(0, s*0.15, s*0.12, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 20;
+
+        // 核心外圈
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = s*0.02;
+        ctx.beginPath();
+        ctx.arc(0, s*0.15, s*0.18, 0, Math.PI*2);
+        ctx.stroke();
+
+        // ===== 肩甲 =====
+        ctx.fillStyle = secondaryColor;
+        // 左肩甲
+        ctx.beginPath();
+        ctx.moveTo(-s*0.55, -s*0.1);
+        ctx.lineTo(-s*1.0, -s*0.15);
+        ctx.lineTo(-s*0.9, s*0.35);
+        ctx.lineTo(-s*0.5, s*0.3);
+        ctx.closePath();
+        ctx.fill();
+        // 右肩甲
+        ctx.beginPath();
+        ctx.moveTo(s*0.55, -s*0.1);
+        ctx.lineTo(s*1.0, -s*0.15);
+        ctx.lineTo(s*0.9, s*0.35);
+        ctx.lineTo(s*0.5, s*0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // 肩甲装饰线
+        ctx.strokeStyle = eyeColor;
+        ctx.lineWidth = s*0.015;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.8, 0);
+        ctx.lineTo(-s*0.7, s*0.2);
+        ctx.moveTo(s*0.8, 0);
+        ctx.lineTo(s*0.7, s*0.2);
+        ctx.stroke();
+
+        // ===== 机甲手臂 =====
+        // 左臂
+        const armGradient = ctx.createLinearGradient(-s*0.9, s*0.2, -s*0.7, s*0.5);
+        armGradient.addColorStop(0, color);
+        armGradient.addColorStop(1, secondaryColor);
+        ctx.fillStyle = armGradient;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.85, s*0.4, s*0.18, s*0.25, -0.3, 0, Math.PI*2);
+        ctx.fill();
+        // 左手拳
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.arc(-s*0.95, s*0.65, s*0.15, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右臂
+        const armGradient2 = ctx.createLinearGradient(s*0.7, s*0.2, s*0.9, s*0.5);
+        armGradient2.addColorStop(0, secondaryColor);
+        armGradient2.addColorStop(1, color);
+        ctx.fillStyle = armGradient2;
+        ctx.beginPath();
+        ctx.ellipse(s*0.85, s*0.4, s*0.18, s*0.25, 0.3, 0, Math.PI*2);
+        ctx.fill();
+        // 右手拳
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.arc(s*0.95, s*0.65, s*0.15, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 机甲腿部 =====
+        // 左腿
+        ctx.fillStyle = color;
+        ctx.fillRect(-s*0.35, s*0.6, s*0.25, s*0.4);
+        // 左膝关节
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.arc(-s*0.225, s*0.8, s*0.12, 0, Math.PI*2);
+        ctx.fill();
+        // 左脚
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.25, s*1.05, s*0.25, s*0.12, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右腿
+        ctx.fillStyle = color;
+        ctx.fillRect(s*0.1, s*0.6, s*0.25, s*0.4);
+        // 右膝关节
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.arc(s*0.225, s*0.8, s*0.12, 0, Math.PI*2);
+        ctx.fill();
+        // 右脚
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.ellipse(s*0.25, s*1.05, s*0.25, s*0.12, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 特效 =====
+        // 背部喷射效果
+        ctx.fillStyle = eyeColor;
+        ctx.globalAlpha = 0.6 + Math.sin(frameCount * 0.3) * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.3, s*0.7);
+        ctx.lineTo(-s*0.45, s*1.0);
+        ctx.lineTo(-s*0.15, s*0.7);
         ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(s*0.3, s*1.4);
-        ctx.lineTo(s*0.15, s*1.7);
-        ctx.lineTo(s*0.45, s*1.4);
+        ctx.moveTo(s*0.3, s*0.7);
+        ctx.lineTo(s*0.45, s*1.0);
+        ctx.lineTo(s*0.15, s*0.7);
         ctx.fill();
+        ctx.globalAlpha = 1;
 
-        // 变身状态指示器 - 显示无限符号表示永久有效
-        if (this.isTransformed) {
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.9)';
-            ctx.font = `bold ${s*0.35}px Arial`;
+        ctx.restore();
+
+        // 变身剩余时间指示器
+        if (this.transformTimer > 0) {
+            ctx.fillStyle = eyeColor;
+            ctx.font = `bold ${s*0.3}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText('∞', 0, s*1.5);
+            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*1.4);
         }
     }
 
@@ -2675,11 +2848,6 @@ function initPlatformer() {
     const boxX = Math.floor(levelLength * 0.25);
     const boxY = 280; // 放在平台高度，容易看到
     specialTransformBox = new SpecialTransformBox(boxX, boxY);
-
-    // 显示提示告诉玩家变身箱子的位置
-    setTimeout(() => {
-        showHint(`⚡ 变身箱子在前方 ${Math.floor(boxX * 0.01)}米处！`);
-    }, 2000);
 }
 
 function updateProgressBar() {
@@ -2743,10 +2911,10 @@ function updatePlatformer(timestamp) {
                 // 被怪兽击败 - 清除所有道具效果
                 player.isTransformed = false;
                 player.transformTimer = 0;
+                currentMecha = null;
                 playerFireMode = 'normal';
                 fireModeTimer = 0;
                 AudioSys.playFail();
-                showHint('💔 被击败了！道具效果已清除');
                 state = 'over';
                 setTimeout(() => restart(), 50);
                 return;
@@ -2795,7 +2963,7 @@ function updatePlatformer(timestamp) {
             player.isTransformed = true;
             // 永久变身，直到获取新道具或被击败
             AudioSys.playTransform();
-            showHint('⚡ 变身为炫蓝雷霆！（永久有效）');
+            showTransformSelection();
         }
     }
 
@@ -2942,6 +3110,90 @@ function drawPlatformer() {
     }
 }
 
+// ==================== 机甲选择界面 ====================
+function showTransformSelection() {
+    // 暂停游戏
+    const wasPlaying = state === 'play';
+    state = 'q';
+
+    const mechaSelect = document.getElementById('mechaSelect');
+    const mechaGrid = document.getElementById('mechaGrid');
+
+    // 随机选择3个不同的机甲
+    const shuffled = [...MECHA_CHARACTERS].sort(() => Math.random() - 0.5);
+    const selectedMechas = shuffled.slice(0, 3);
+
+    mechaGrid.innerHTML = '';
+
+    selectedMechas.forEach((mecha, index) => {
+        const card = document.createElement('div');
+        card.style.cssText = `
+            width: 120px;
+            height: 160px;
+            background: linear-gradient(135deg, ${mecha.color}, ${mecha.secondaryColor});
+            border: 3px solid ${mecha.color};
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px ${mecha.color}80;
+        `;
+
+        // 机甲图标
+        const icon = document.createElement('div');
+        icon.textContent = mecha.emoji;
+        icon.style.cssText = 'font-size: 50px; margin-bottom: 8px;';
+
+        // 机甲名称
+        const name = document.createElement('div');
+        name.textContent = mecha.name;
+        name.style.cssText = 'font-size: 14px; font-weight: bold; color: white; text-align: center;';
+
+        // 机甲描述
+        const desc = document.createElement('div');
+        desc.textContent = mecha.description;
+        desc.style.cssText = 'font-size: 10px; color: rgba(255,255,255,0.8); text-align: center; margin-top: 5px; padding: 0 5px;';
+
+        card.appendChild(icon);
+        card.appendChild(name);
+        card.appendChild(desc);
+
+        // 悬停效果
+        card.onmouseenter = () => {
+            card.style.transform = 'scale(1.1)';
+            card.style.boxShadow = `0 0 30px ${mecha.color}`;
+        };
+        card.onmouseleave = () => {
+            card.style.transform = 'scale(1)';
+            card.style.boxShadow = `0 0 20px ${mecha.color}80`;
+        };
+
+        // 点击选择
+        card.onclick = () => {
+            selectMecha(mecha);
+        };
+
+        mechaGrid.appendChild(card);
+    });
+
+    mechaSelect.style.display = 'flex';
+}
+
+function selectMecha(mecha) {
+    currentMecha = mecha;
+    player.isTransformed = true;
+    player.transformTimer = 600; // 10秒 (60fps * 10)
+
+    document.getElementById('mechaSelect').style.display = 'none';
+    state = 'play';
+
+    AudioSys.playTransform();
+    showHint(`⚡ ${mecha.name}！`);
+}
+
 // 提示系统
 let hintTimer = null;
 function showHint(text) {
@@ -3021,11 +3273,9 @@ function collectItem(type) {
     if (item.effect === 'score') {
         score += item.score; AudioSys.playCoin();
     } else if (item.effect === 'fireMode') {
-        // 火力增强道具 - 永久有效，直到获取新道具或被击败
         playerFireMode = item.mode;
-        fireModeTimer = 0; // 不再使用倒计时
+        fireModeTimer = 0;
         AudioSys.playTransform();
-        showHint(`${item.emoji} ${item.name}！火力增强！（永久有效）`);
     } else if (item.effect === 'invincible') {
         player.invincible = 300; AudioSys.playTransform();
     }
@@ -4164,9 +4414,10 @@ function restart() {
             player.j = 0;
             player.g = false;
         }
-        // 重置火力模式
+        // 重置火力模式和机甲
         playerFireMode = 'normal';
         fireModeTimer = 0;
+        currentMecha = null;
         // 清除所有游戏对象
         bullets = [];
         items = [];
