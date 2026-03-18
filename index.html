@@ -667,23 +667,8 @@ class Player {
             this.flashFrame = (this.flashFrame + 1) % 10;
         }
 
-        // 变身倒计时
-        if (this.transformTimer > 0) {
-            this.transformTimer--;
-            if (this.transformTimer <= 0) {
-                this.isTransformed = false;
-                showHint('变身结束！');
-            }
-        }
-
-        // 火力模式倒计时
-        if (fireModeTimer > 0) {
-            fireModeTimer--;
-            if (fireModeTimer <= 0) {
-                playerFireMode = 'normal';
-                showHint('火力增强结束！');
-            }
-        }
+        // 变身和火力模式现在为永久效果，直到获取新道具或被击败
+        // 不再自动倒计时
     }
 
     draw() {
@@ -1405,12 +1390,12 @@ class Player {
         ctx.lineTo(s*0.45, s*1.4);
         ctx.fill();
 
-        // 变身剩余时间指示器（移到角色下方）
-        if (this.transformTimer > 0) {
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
-            ctx.font = `bold ${s*0.4}px Arial`;
+        // 变身状态指示器 - 显示无限符号表示永久有效
+        if (this.isTransformed) {
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.9)';
+            ctx.font = `bold ${s*0.35}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*1.5);
+            ctx.fillText('∞', 0, s*1.5);
         }
     }
 
@@ -2478,7 +2463,13 @@ function updatePlatformer(timestamp) {
                 player.invincible = 120;
                 AudioSys.playFail();
             } else {
+                // 被怪兽击败 - 清除所有道具效果
+                player.isTransformed = false;
+                player.transformTimer = 0;
+                playerFireMode = 'normal';
+                fireModeTimer = 0;
                 AudioSys.playFail();
+                showHint('💔 被击败了！道具效果已清除');
                 state = 'over';
                 setTimeout(() => restart(), 50);
                 return;
@@ -2525,9 +2516,9 @@ function updatePlatformer(timestamp) {
         if (Math.hypot(player.x - specialTransformBox.x, player.y - specialTransformBox.y) < 45) {
             specialTransformBox.done = true;
             player.isTransformed = true;
-            player.transformTimer = 600; // 10秒 (60fps * 10)
+            // 永久变身，直到获取新道具或被击败
             AudioSys.playTransform();
-            showHint('⚡ 变身为炫蓝雷霆！');
+            showHint('⚡ 变身为炫蓝雷霆！（永久有效）');
         }
     }
 
@@ -2618,8 +2609,8 @@ function drawPlatformer() {
 
     player.draw();
 
-    // 绘制当前火力模式
-    if (playerFireMode !== 'normal' && fireModeTimer > 0) {
+    // 绘制当前火力模式（永久有效）
+    if (playerFireMode !== 'normal') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(10, 100, 120, 35);
         ctx.fillStyle = '#FFD700';
@@ -2628,9 +2619,9 @@ function drawPlatformer() {
         const modeName = playerFireMode === 'electric' ? '⚡电击弹' :
                         playerFireMode === 'spread' ? '🔥散弹枪' : '🐉火龙炮';
         ctx.fillText(modeName, 15, 115);
-        ctx.fillStyle = '#FFF';
+        ctx.fillStyle = '#00FF00';
         ctx.font = '12px Arial';
-        ctx.fillText(`${Math.ceil(fireModeTimer/60)}秒`, 15, 128);
+        ctx.fillText('∞ 永久', 15, 128);
     }
 }
 
@@ -2713,11 +2704,11 @@ function collectItem(type) {
     if (item.effect === 'score') {
         score += item.score; AudioSys.playCoin();
     } else if (item.effect === 'fireMode') {
-        // 火力增强道具
+        // 火力增强道具 - 永久有效，直到获取新道具或被击败
         playerFireMode = item.mode;
-        fireModeTimer = FIRE_MODE_DURATION;
+        fireModeTimer = 0; // 不再使用倒计时
         AudioSys.playTransform();
-        showHint(`${item.emoji} ${item.name}！火力增强！`);
+        showHint(`${item.emoji} ${item.name}！火力增强！（永久有效）`);
     } else if (item.effect === 'invincible') {
         player.invincible = 300; AudioSys.playTransform();
     }
@@ -3845,7 +3836,7 @@ function restart() {
     ['ArrowLeft', 'ArrowRight', 'Space', 'KeyF'].forEach(k => keys[k] = false);
     if (gameMode === 'platformer') {
         level = 1; score = 0; candies = 0;
-        // 确保玩家速度被重置
+        // 确保玩家状态被重置（包括道具效果）
         if (player) {
             player.vx = 0;
             player.vy = 0;
@@ -3856,6 +3847,9 @@ function restart() {
             player.j = 0;
             player.g = false;
         }
+        // 重置火力模式
+        playerFireMode = 'normal';
+        fireModeTimer = 0;
         // 清除所有游戏对象
         bullets = [];
         items = [];
