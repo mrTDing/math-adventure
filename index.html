@@ -141,7 +141,8 @@
                 <button onclick="startElimination()">🧩 数字消消乐</button>
                 <button onclick="startCircus()">🎪 马戏团跳火圈</button>
             </div>
-            <button onclick="toggleMuteFromStart()" id="muteBtn" style="margin-top: 20px; font-size: 18px; padding: 10px 30px; background: linear-gradient(145deg, #4ade80, #22c55e); border-radius: 25px; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: inline-block; position: relative; z-index: 10;">🔊 音效: 开</button>
+            <!-- 背景音效按钮已禁用 -->
+            <!-- <button onclick="toggleMuteFromStart()" id="muteBtn" style="margin-top: 20px; font-size: 18px; padding: 10px 30px; background: linear-gradient(145deg, #4ade80, #22c55e); border-radius: 25px; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: inline-block; position: relative; z-index: 10;">🔊 音效: 开</button> -->
             <div id="tips">
                 <p>⬅️➡️ 移动 | 空格/⬆️ 跳跃(可二段跳)</p>
                 <p>F键/🔥发射炮弹打怪兽 | 顶问号答题 | 找⚡变身炫蓝雷霆 | 吃糖果 | 到旗帜过关！</p>
@@ -274,8 +275,11 @@ const AudioSys = {
     playChord(freqs, duration) {
         freqs.forEach(f => this.playTone(f, f, duration, 'triangle'));
     },
-    // 背景音乐系统 - 轻松欢快的旋律
+    // 背景音乐系统 - 已禁用
     startBGM() {
+        // 背景音效已禁用，保留其他游戏音效
+        return;
+        /*
         if (this.isBGMPlaying || this.isMuted || !this.ctx) return;
         // 确保音频上下文已恢复
         if (this.ctx.state === 'suspended') {
@@ -286,7 +290,7 @@ const AudioSys = {
         this.bgmGain.gain.value = 0.08; // 背景音量较小
         this.bgmGain.connect(this.ctx.destination);
         this.playBGMSequence();
-    },
+        */
     stopBGM() {
         this.isBGMPlaying = false;
         this.bgmOscillators.forEach(osc => {
@@ -3381,8 +3385,8 @@ function startElimination() {
     elimTarget = Math.floor(Math.random() * 6) + 5;
     document.getElementById('elimTargetNum').textContent = elimTarget;
     document.getElementById('targetNum').textContent = elimTarget;
-    // 启动背景音乐
-    AudioSys.startBGM();
+    // 背景音效已禁用
+    // AudioSys.startBGM();
     elimLoop();
 }
 
@@ -4004,8 +4008,8 @@ function startCircusGame() {
     // 初始化游戏
     initCircus();
 
-    // 启动背景音乐
-    AudioSys.startBGM();
+    // 背景音效已禁用
+    // AudioSys.startBGM();
 
     // 开始游戏循环
     circusLoop();
@@ -4444,8 +4448,8 @@ function startGameAfterSelection() {
     state = 'play'; initPlatformer();
     lastTime = 0;
     frameCount = 0;
-    // 启动背景音乐
-    AudioSys.startBGM();
+    // 背景音效已禁用
+    // AudioSys.startBGM();
     loop();
 }
 
@@ -4605,8 +4609,8 @@ function resumeGame() {
         state = 'play';
         document.getElementById('pause').style.display = 'none';
         lastTime = 0;
-        // 恢复时重新启动背景音乐
-        AudioSys.startBGM();
+        // 背景音效已禁用
+        // AudioSys.startBGM();
         if (gameMode === 'platformer') loop();
         else if (gameMode === 'elimination') elimLoop();
     }
