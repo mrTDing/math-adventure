@@ -98,7 +98,6 @@
             .difficulty-emoji { font-size: 28px; }
             .difficulty-name { font-size: 16px; }
             .progress-bar { font-size: 12px; top: 35px; }
-            #muteBtn { font-size: 14px !important; padding: 8px 20px !important; margin-top: 15px !important; }
         }
 
         /* 动画 */
@@ -141,8 +140,6 @@
                 <button onclick="startElimination()">🧩 数字消消乐</button>
                 <button onclick="startCircus()">🎪 马戏团跳火圈</button>
             </div>
-            <!-- 背景音效按钮已禁用 -->
-            <!-- <button onclick="toggleMuteFromStart()" id="muteBtn" style="margin-top: 20px; font-size: 18px; padding: 10px 30px; background: linear-gradient(145deg, #4ade80, #22c55e); border-radius: 25px; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: inline-block; position: relative; z-index: 10;">🔊 音效: 开</button> -->
             <div id="tips">
                 <p>⬅️➡️ 移动 | 空格/⬆️ 跳跃(可二段跳)</p>
                 <p>F键/🔥发射炮弹打怪兽 | 顶问号答题 | 找⚡变身炫蓝雷霆 | 吃糖果 | 到旗帜过关！</p>
@@ -214,16 +211,8 @@
             <h1>⏸️ 游戏暂停</h1>
             <div>
                 <button onclick="resumeGame()">▶️ 继续游戏</button>
-                <button onclick="toggleMuteFromPause()" id="pauseMuteBtn">🔊 音效</button>
                 <button class="btn-small" onclick="backToMenu()">← 返回主菜单</button>
             </div>
-        </div>
-
-        <!-- 机甲选择界面 -->
-        <div id="mechaSelect" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 300;">
-            <h1 style="font-size: 32px; margin-bottom: 10px; text-shadow: 0 0 20px #00FFFF;">⚡ 选择你的机甲 ⚡</h1>
-            <p style="font-size: 14px; color: #aaa; margin-bottom: 20px;">变身时间：10秒</p>
-            <div id="mechaGrid" style="display: flex; gap: 20px; margin: 20px 0;"></div>
         </div>
 
         <div id="touch">
@@ -243,13 +232,7 @@
 const AudioSys = {
     ctx: null, isMuted: false, bgmOscillators: [], bgmGain: null, isBGMPlaying: false,
     init() {
-        if (!this.ctx) {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        // 尝试恢复音频上下文（浏览器自动播放策略需要用户交互后才能播放）
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     },
     playJump() { this.playTone(200, 600, 0.1, 'sine'); },
     playCoin() { this.playTone(1200, 1600, 0.15, 'sine'); },
@@ -275,22 +258,15 @@ const AudioSys = {
     playChord(freqs, duration) {
         freqs.forEach(f => this.playTone(f, f, duration, 'triangle'));
     },
-    // 背景音乐系统 - 已禁用
+    // 背景音乐系统 - 轻松欢快的旋律
     startBGM() {
-        // 背景音效已禁用，保留其他游戏音效
-        return;
-        /*
         if (this.isBGMPlaying || this.isMuted || !this.ctx) return;
-        // 确保音频上下文已恢复
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
         this.isBGMPlaying = true;
         this.bgmGain = this.ctx.createGain();
         this.bgmGain.gain.value = 0.08; // 背景音量较小
         this.bgmGain.connect(this.ctx.destination);
         this.playBGMSequence();
-        */
+    },
     stopBGM() {
         this.isBGMPlaying = false;
         this.bgmOscillators.forEach(osc => {
@@ -366,63 +342,7 @@ const AudioSys = {
 };
 
 // ==================== 角色数据（参考蛋仔派对）====================
-// 蛋仔派对经典角色特点：圆润蛋形身体、短小四肢、呆萌大眼睛
 const CHARACTERS = [
-    {
-        id: 'yellow',
-        name: '小黄蛋',
-        emoji: '🥚',
-        color: '#FFD700',
-        secondaryColor: '#FFE55C',
-        hat: 'none',
-        face: 'classic_egg',
-        accessory: 'none',
-        description: '最经典的蛋仔'
-    },
-    {
-        id: 'pink',
-        name: '小粉蛋',
-        emoji: '🌸',
-        color: '#FF69B4',
-        secondaryColor: '#FFB6C1',
-        hat: 'bow_pink',
-        face: 'cute_egg',
-        accessory: 'none',
-        description: '可爱粉色蛋仔'
-    },
-    {
-        id: 'blue',
-        name: '小蓝蛋',
-        emoji: '💙',
-        color: '#4169E1',
-        secondaryColor: '#6495ED',
-        hat: 'none',
-        face: 'cool_egg',
-        accessory: 'none',
-        description: '冷静蓝色蛋仔'
-    },
-    {
-        id: 'green',
-        name: '小绿蛋',
-        emoji: '🍀',
-        color: '#32CD32',
-        secondaryColor: '#7CFC00',
-        hat: 'leaf',
-        face: 'happy_egg',
-        accessory: 'none',
-        description: '活力绿色蛋仔'
-    },
-    {
-        id: 'purple',
-        name: '小紫蛋',
-        emoji: '💜',
-        color: '#9370DB',
-        secondaryColor: '#BA55D3',
-        hat: 'star_hat',
-        face: 'mischievous_egg',
-        accessory: 'none',
-        description: '神秘紫色蛋仔'
-    },
     {
         id: 'bear',
         name: '仔仔熊',
@@ -431,8 +351,7 @@ const CHARACTERS = [
         secondaryColor: '#FFE066',
         hat: 'bear_ears',
         face: 'cute',
-        accessory: 'none',
-        description: '温暖的小熊蛋仔'
+        accessory: 'none'
     },
     {
         id: 'jk',
@@ -442,19 +361,57 @@ const CHARACTERS = [
         secondaryColor: '#FFC0CB',
         hat: 'bow_pink',
         face: 'happy',
-        accessory: 'glasses',
-        description: '时尚的JK蛋仔'
+        accessory: 'glasses'
+    },
+    {
+        id: 'hamster',
+        name: '仓鼠米仔',
+        emoji: '🐹',
+        color: '#F4A460',
+        secondaryColor: '#DEB887',
+        hat: 'hamster_ears',
+        face: 'cheeky',
+        accessory: 'blush'
     },
     {
         id: 'robot',
-        name: '机械蛋仔',
+        name: '机械贝克',
         emoji: '🤖',
         color: '#4682B4',
         secondaryColor: '#5F9EA0',
         hat: 'antenna',
         face: 'cool',
-        accessory: 'headphones',
-        description: '科技感十足的蛋仔'
+        accessory: 'headphones'
+    },
+    {
+        id: 'rock',
+        name: '摇滚卡萝',
+        emoji: '🎸',
+        color: '#9370DB',
+        secondaryColor: '#BA55D3',
+        hat: 'mohawk',
+        face: 'cool',
+        accessory: 'sunglasses'
+    },
+    {
+        id: 'panda',
+        name: '熊猫岁岁',
+        emoji: '🐼',
+        color: '#FFFFFF',
+        secondaryColor: '#F5F5F5',
+        hat: 'panda_ears',
+        face: 'sleepy',
+        accessory: 'bamboo'
+    },
+    {
+        id: 'dragon',
+        name: '暴龙崽崽',
+        emoji: '🦖',
+        color: '#32CD32',
+        secondaryColor: '#7CFC00',
+        hat: 'dino_spikes',
+        face: 'fierce',
+        accessory: 'none'
     },
     {
         id: 'devil',
@@ -464,8 +421,7 @@ const CHARACTERS = [
         secondaryColor: '#FF4500',
         hat: 'devil_horns',
         face: 'mischievous',
-        accessory: 'pitchfork',
-        description: '调皮的小恶魔蛋仔'
+        accessory: 'pitchfork'
     },
     {
         id: 'langge',
@@ -475,8 +431,7 @@ const CHARACTERS = [
         secondaryColor: '#6495ED',
         hat: 'crown_gold',
         face: 'confident',
-        accessory: 'microphone',
-        description: '霸气侧漏的主播蛋仔'
+        accessory: 'microphone'
     }
 ];
 
@@ -613,73 +568,27 @@ let player, blocks = [], coins = [], questions = [], flag, cam = 0;
 let items = [], bullets = [];
 let lastFireTime = 0; // 上次发射时间
 const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
-let mechaGiftBoxes = []; // 机甲礼物盒子数组
-
-// ==================== 炫卡斗士机甲数据 ====================
-const MECHA_CHARACTERS = [
-    {
-        id: 'xuanlan',
-        name: '炫蓝雷霆王',
-        emoji: '⚡',
-        color: '#00CED1',
-        secondaryColor: '#008B8B',
-        type: 'lightning',
-        description: '雷电之力，速度型机甲'
-    },
-    {
-        id: 'chilian',
-        name: '赤炼重魂王',
-        emoji: '🔥',
-        color: '#DC143C',
-        secondaryColor: '#8B0000',
-        type: 'flame',
-        description: '火焰之力，攻击型机甲'
-    },
-    {
-        id: 'xuantie',
-        name: '玄铁战神',
-        emoji: '🛡️',
-        color: '#4A4A4A',
-        secondaryColor: '#2F2F2F',
-        type: 'defense',
-        description: '钢铁之躯，防御型机甲'
-    },
-    {
-        id: 'qingfeng',
-        name: '青锋战王',
-        emoji: '⚔️',
-        color: '#32CD32',
-        secondaryColor: '#228B22',
-        type: 'wind',
-        description: '疾风之力，敏捷型机甲'
-    },
-    {
-        id: 'canglong',
-        name: '苍龙皇',
-        emoji: '🐉',
-        color: '#4169E1',
-        secondaryColor: '#1E90FF',
-        type: 'water',
-        description: '深海之力，均衡型机甲'
-    }
-];
-let currentMecha = null; // 当前变身的机甲
+let specialTransformBox = null; // 特殊变身箱子
 
 // 道具类型
-// 玩家火力状态
-let playerFireMode = 'normal'; // normal, electric, spread, flame
-let fireModeTimer = 0;
-const FIRE_MODE_DURATION = 600; // 10秒
+// 玩家火力状态（永久生效，被击败或换武器时重置）
+let playerFireMode = 'normal'; // normal, electric, spread, flame, ice, bubble, laser, missile, poison, rainbow
 
 const ITEM_TYPES = {
     SUNFLOWER: { emoji: '🌻', score: 50, effect: 'score' },
     STAR: { emoji: '⭐', effect: 'invincible' },
     COIN: { emoji: '🪙', score: 30, effect: 'score' },
     DIAMOND: { emoji: '💎', score: 80, effect: 'score' },
-    // 火力增强道具（概率低于计算题）
+    // 火力增强道具
     ELECTRIC: { emoji: '⚡', effect: 'fireMode', mode: 'electric', name: '电击弹' },
     SPREAD: { emoji: '🔥', effect: 'fireMode', mode: 'spread', name: '散弹枪' },
-    FLAME: { emoji: '🐉', effect: 'fireMode', mode: 'flame', name: '火龙炮' }
+    FLAME: { emoji: '🐉', effect: 'fireMode', mode: 'flame', name: '火龙炮' },
+    ICE: { emoji: '❄️', effect: 'fireMode', mode: 'ice', name: '冰冻弹' },
+    BUBBLE: { emoji: '🫧', effect: 'fireMode', mode: 'bubble', name: '水泡泡' },
+    LASER: { emoji: '⚡', effect: 'fireMode', mode: 'laser', name: '激光炮' },
+    MISSILE: { emoji: '🚀', effect: 'fireMode', mode: 'missile', name: '追踪导弹' },
+    POISON: { emoji: '☠️', effect: 'fireMode', mode: 'poison', name: '毒液弹' },
+    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' }
 };
 
 // ==================== 消消乐变量 ====================
@@ -762,12 +671,11 @@ class Player {
             this.flashFrame = (this.flashFrame + 1) % 10;
         }
 
-        // 变身倒计时（10秒体验）
+        // 变身倒计时
         if (this.transformTimer > 0) {
             this.transformTimer--;
             if (this.transformTimer <= 0) {
                 this.isTransformed = false;
-                currentMecha = null;
                 showHint('变身结束！');
             }
         }
@@ -785,7 +693,7 @@ class Player {
 
         // 如果处于变身状态，绘制炫蓝雷霆
         if (this.isTransformed) {
-            this.drawMecha(s);
+            this.drawXuanBlueThunder(s);
         } else {
             const char = selectedChar || CHARACTERS[0];
 
@@ -1020,255 +928,49 @@ class Player {
     }
 
     drawEggCharacter(s, char) {
-        // ===== 蛋仔派对风格的圆润蛋形身体 =====
-        // 身体主体 - 更接近正圆的蛋形
-        const bodyGradient = ctx.createRadialGradient(-s*0.2, -s*0.25, 0, 0, 0, s*1.1);
-        bodyGradient.addColorStop(0, char.secondaryColor || '#FFFFFF');
-        bodyGradient.addColorStop(0.3, char.color);
+        // 蛋仔派对风格的圆润蛋形身体
+        const bodyGradient = ctx.createRadialGradient(-s*0.3, -s*0.4, 0, 0, 0, s*1.3);
+        bodyGradient.addColorStop(0, char.secondaryColor || char.color);
+        bodyGradient.addColorStop(0.5, char.color);
         bodyGradient.addColorStop(1, char.color);
 
         ctx.fillStyle = bodyGradient;
         ctx.beginPath();
-        // 蛋仔派对标志性的圆润蛋形 - 更接近圆形
-        ctx.ellipse(0, 0, s*0.85, s*0.9, 0, 0, Math.PI*2);
+        // 更圆润的蛋形
+        ctx.ellipse(0, s*0.1, s*0.95, s*1.15, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 蛋仔派对标志性高光（左上方的亮面）
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        // 高光（蛋仔派对标志性的亮面）
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.beginPath();
-        ctx.ellipse(-s*0.25, -s*0.35, s*0.18, s*0.25, -0.4, 0, Math.PI*2);
+        ctx.ellipse(-s*0.35, -s*0.5, s*0.25, s*0.35, -0.4, 0, Math.PI*2);
         ctx.fill();
 
-        // 小高光点
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath();
-        ctx.arc(-s*0.3, -s*0.4, s*0.06, 0, Math.PI*2);
-        ctx.fill();
-
-        // 绘制装饰（耳朵/帽子等）- 在身体上方
+        // 绘制装饰（耳朵/帽子等）
         this.drawHat(s, char.hat, char.color);
-
-        // 根据face类型绘制不同表情
-        this.drawFace(s, char.face);
 
         // 绘制配饰
         this.drawAccessory(s, char.accessory);
 
-        // ===== 蛋仔派对风格的小短手（更明显） =====
-        // 左手 - 短小圆润，更突出
+        // 根据face类型绘制不同表情
+        this.drawFace(s, char.face);
+
+        // 小手（蛋仔风格的小圆手）
         ctx.fillStyle = char.color;
         ctx.beginPath();
-        ctx.arc(-s*0.75, s*0.15, s*0.2, 0, Math.PI*2);
-        ctx.fill();
-        // 手掌高光
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.beginPath();
-        ctx.arc(-s*0.72, s*0.12, s*0.08, 0, Math.PI*2);
+        ctx.arc(-s*0.85, s*0.3, s*0.18, 0, Math.PI*2);
+        ctx.arc(s*0.85, s*0.3, s*0.18, 0, Math.PI*2);
         ctx.fill();
 
-        // 右手
-        ctx.fillStyle = char.color;
+        // 小脚（蛋仔风格的小脚）
         ctx.beginPath();
-        ctx.arc(s*0.75, s*0.15, s*0.2, 0, Math.PI*2);
+        ctx.ellipse(-s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
         ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.beginPath();
-        ctx.arc(s*0.72, s*0.12, s*0.08, 0, Math.PI*2);
-        ctx.fill();
-
-        // ===== 蛋仔派对风格的小短脚（更明显） =====
-        // 左脚 - 短粗圆润
-        ctx.fillStyle = char.color;
-        ctx.beginPath();
-        ctx.ellipse(-s*0.35, s*0.95, s*0.22, s*0.18, 0, 0, Math.PI*2);
-        ctx.fill();
-        // 脚底
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.beginPath();
-        ctx.ellipse(-s*0.35, s*0.95, s*0.15, s*0.12, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // 右脚
-        ctx.fillStyle = char.color;
-        ctx.beginPath();
-        ctx.ellipse(s*0.35, s*0.95, s*0.22, s*0.18, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.beginPath();
-        ctx.ellipse(s*0.35, s*0.95, s*0.15, s*0.12, 0, 0, Math.PI*2);
-        ctx.fill();
-    }
-
-    // 辅助函数：加深颜色
-    darkenColor(color, factor) {
-        // 简单的颜色加深处理
-        return color; // 返回原色，实际使用时可以实现更复杂的颜色处理
     }
 
     drawFace(s, faceType) {
         switch(faceType) {
-            case 'classic_egg': // 经典蛋仔表情 - 小黄蛋
-                // 蛋仔派对标志性的呆萌大眼睛
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(-s*0.28, -s*0.25, s*0.2, s*0.26, 0, 0, Math.PI*2);
-                ctx.ellipse(s*0.28, -s*0.25, s*0.2, s*0.26, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 黑色眼珠（蛋仔标志性的豆豆眼）
-                ctx.fillStyle = '#1a1a1a';
-                ctx.beginPath();
-                ctx.arc(-s*0.25, -s*0.22, s*0.1, 0, Math.PI*2);
-                ctx.arc(s*0.31, -s*0.22, s*0.1, 0, Math.PI*2);
-                ctx.fill();
-
-                // 高光（让眼睛更有神）
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(-s*0.22, -s*0.26, s*0.04, 0, Math.PI*2);
-                ctx.arc(s*0.34, -s*0.26, s*0.04, 0, Math.PI*2);
-                ctx.fill();
-
-                // 蛋仔标志性的小嘴巴
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = s*0.04;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(0, s*0.05, s*0.08, 0.1, Math.PI-0.1);
-                ctx.stroke();
-                break;
-
-            case 'cute_egg': // 可爱蛋仔表情 - 小粉蛋
-                // 闪亮的大眼睛
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(-s*0.28, -s*0.25, s*0.22, s*0.28, 0, 0, Math.PI*2);
-                ctx.ellipse(s*0.28, -s*0.25, s*0.22, s*0.28, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 粉色渐变眼珠
-                const cuteGradient = ctx.createRadialGradient(-s*0.25, -s*0.22, 0, -s*0.25, -s*0.22, s*0.1);
-                cuteGradient.addColorStop(0, '#FF69B4');
-                cuteGradient.addColorStop(1, '#C71585');
-                ctx.fillStyle = cuteGradient;
-                ctx.beginPath();
-                ctx.arc(-s*0.25, -s*0.22, s*0.1, 0, Math.PI*2);
-                ctx.fill();
-                const cuteGradient2 = ctx.createRadialGradient(s*0.31, -s*0.22, 0, s*0.31, -s*0.22, s*0.1);
-                cuteGradient2.addColorStop(0, '#FF69B4');
-                cuteGradient2.addColorStop(1, '#C71585');
-                ctx.fillStyle = cuteGradient2;
-                ctx.beginPath();
-                ctx.arc(s*0.31, -s*0.22, s*0.1, 0, Math.PI*2);
-                ctx.fill();
-
-                // 高光
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(-s*0.22, -s*0.28, s*0.05, 0, Math.PI*2);
-                ctx.arc(s*0.34, -s*0.28, s*0.05, 0, Math.PI*2);
-                ctx.fill();
-
-                // 可爱小嘴
-                ctx.fillStyle = '#FF6B6B';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.08, s*0.08, s*0.06, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 腮红
-                ctx.fillStyle = 'rgba(255,150,150,0.5)';
-                ctx.beginPath();
-                ctx.arc(-s*0.5, s*0.05, s*0.12, 0, Math.PI*2);
-                ctx.arc(s*0.5, s*0.05, s*0.12, 0, Math.PI*2);
-                ctx.fill();
-                break;
-
-            case 'cool_egg': // 酷酷蛋仔表情 - 小蓝蛋
-                // 酷酷的半睁眼
-                ctx.strokeStyle = '#1a1a1a';
-                ctx.lineWidth = s*0.05;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(-s*0.28, -s*0.2, s*0.15, 0.2, Math.PI-0.2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(s*0.28, -s*0.2, s*0.15, 0.2, Math.PI-0.2);
-                ctx.stroke();
-
-                // 蓝色眼睛
-                ctx.fillStyle = '#4169E1';
-                ctx.beginPath();
-                ctx.ellipse(-s*0.28, -s*0.22, s*0.12, s*0.08, 0, 0, Math.PI*2);
-                ctx.ellipse(s*0.28, -s*0.22, s*0.12, s*0.08, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 酷酷的嘴
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = s*0.04;
-                ctx.beginPath();
-                ctx.moveTo(-s*0.08, s*0.1);
-                ctx.lineTo(s*0.08, s*0.1);
-                ctx.stroke();
-                break;
-
-            case 'happy_egg': // 开心蛋仔表情 - 小绿蛋
-                // 笑眯眯的眼睛
-                ctx.strokeStyle = '#1a1a1a';
-                ctx.lineWidth = s*0.05;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(-s*0.28, -s*0.22, s*0.12, 0.5, Math.PI-0.5);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(s*0.28, -s*0.22, s*0.12, 0.5, Math.PI-0.5);
-                ctx.stroke();
-
-                // 大笑的嘴
-                ctx.fillStyle = '#FF6B6B';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.1, s*0.12, s*0.15, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 舌头
-                ctx.fillStyle = '#FFB6C1';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.18, s*0.06, s*0.08, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 开心腮红
-                ctx.fillStyle = 'rgba(255,180,100,0.4)';
-                ctx.beginPath();
-                ctx.arc(-s*0.45, s*0.05, s*0.1, 0, Math.PI*2);
-                ctx.arc(s*0.45, s*0.05, s*0.1, 0, Math.PI*2);
-                ctx.fill();
-                break;
-
-            case 'mischievous_egg': // 调皮蛋仔表情 - 小紫蛋
-                // 弯弯的坏笑眼
-                ctx.strokeStyle = '#1a1a1a';
-                ctx.lineWidth = s*0.05;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(-s*0.28, -s*0.25, s*0.1, 0.3, Math.PI-0.3);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(s*0.28, -s*0.25, s*0.1, 0.3, Math.PI-0.3);
-                ctx.stroke();
-
-                // 吐舌头
-                ctx.fillStyle = '#FF6B6B';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.15, s*0.08, s*0.12, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // 腮红
-                ctx.fillStyle = 'rgba(200,100,200,0.4)';
-                ctx.beginPath();
-                ctx.arc(-s*0.45, s*0.08, s*0.1, 0, Math.PI*2);
-                ctx.arc(s*0.45, s*0.08, s*0.1, 0, Math.PI*2);
-                ctx.fill();
-                break;
-
             case 'cute': // 可爱表情 - 仔仔熊
                 // 大眼睛
                 ctx.fillStyle = 'white';
@@ -1463,7 +1165,7 @@ class Player {
                 ctx.fillStyle = '#1a1a1a';
                 ctx.beginPath();
                 ctx.arc(-s*0.28, -s*0.12, s*0.1, 0, Math.PI*2);
-                ctx.arc(s*0.32, -s*0.12, s*0.1, 0, Math.PI*2);
+                ctx.arc(s*0.32, -s*12, s*0.1, 0, Math.PI*2);
                 ctx.fill();
 
                 // 眼睛高光
@@ -1505,12 +1207,6 @@ class Player {
                 ctx.arc(s*0.3, -s*0.15, s*0.1, 0, Math.PI*2);
                 ctx.fill();
         }
-    }
-
-    // 辅助函数：加深颜色
-    darkenColor(color, factor) {
-        // 简单的颜色加深处理
-        return color; // 返回原色，实际使用时可以实现更复杂的颜色处理
     }
 
     drawAccessory(s, accessory) {
@@ -1608,217 +1304,108 @@ class Player {
         }
     }
 
-    drawMecha(s) {
-        // 根据当前机甲类型绘制不同的炫卡斗士风格机甲
-        const mecha = currentMecha || MECHA_CHARACTERS[0];
-        const color = mecha.color;
-        const secondaryColor = mecha.secondaryColor;
-        const type = mecha.type;
-
-        ctx.save();
-
-        // 机甲发光效果
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-
-        // ===== 机甲头部 =====
-        // 头盔主体
-        const headGradient = ctx.createLinearGradient(0, -s*0.8, 0, -s*0.3);
-        headGradient.addColorStop(0, color);
-        headGradient.addColorStop(0.5, secondaryColor);
-        headGradient.addColorStop(1, color);
-
-        ctx.fillStyle = headGradient;
-        ctx.beginPath();
-        ctx.moveTo(-s*0.5, -s*0.3);
-        ctx.quadraticCurveTo(-s*0.6, -s*0.8, 0, -s*0.9);
-        ctx.quadraticCurveTo(s*0.6, -s*0.8, s*0.5, -s*0.3);
-        ctx.closePath();
-        ctx.fill();
-
-        // 头部装甲线条
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        ctx.lineWidth = s*0.02;
-        ctx.beginPath();
-        ctx.moveTo(0, -s*0.85);
-        ctx.lineTo(0, -s*0.4);
-        ctx.stroke();
-
-        // ===== 机甲眼睛（发光效果） =====
-        ctx.shadowBlur = 15;
-        const eyeColor = type === 'lightning' ? '#00FFFF' :
-                        type === 'flame' ? '#FF4500' :
-                        type === 'defense' ? '#FFD700' :
-                        type === 'wind' ? '#00FF00' : '#00CED1';
-        ctx.fillStyle = eyeColor;
-        ctx.shadowColor = eyeColor;
-
-        // 左 eye
-        ctx.beginPath();
-        ctx.ellipse(-s*0.25, -s*0.55, s*0.15, s*0.1, -0.2, 0, Math.PI*2);
-        ctx.fill();
-        // 右 eye
-        ctx.beginPath();
-        ctx.ellipse(s*0.25, -s*0.55, s*0.15, s*0.1, 0.2, 0, Math.PI*2);
-        ctx.fill();
-
-        ctx.shadowBlur = 20;
-
-        // ===== 机甲身体 =====
-        // 胸部装甲
-        const bodyGradient = ctx.createLinearGradient(0, -s*0.2, 0, s*0.6);
-        bodyGradient.addColorStop(0, color);
-        bodyGradient.addColorStop(0.3, secondaryColor);
-        bodyGradient.addColorStop(0.7, color);
-        bodyGradient.addColorStop(1, secondaryColor);
+    drawXuanBlueThunder(s) {
+        // 炫蓝雷霆 - 炫卡斗士风格的机甲战士
+        // 身体（蓝色机甲风格）
+        const bodyGradient = ctx.createRadialGradient(-s*0.2, -s*0.3, 0, 0, 0, s*1.2);
+        bodyGradient.addColorStop(0, '#00CED1');
+        bodyGradient.addColorStop(0.5, '#008B8B');
+        bodyGradient.addColorStop(1, '#006666');
 
         ctx.fillStyle = bodyGradient;
         ctx.beginPath();
-        // 倒梯形身体
-        ctx.moveTo(-s*0.55, -s*0.2);
-        ctx.lineTo(s*0.55, -s*0.2);
-        ctx.lineTo(s*0.4, s*0.6);
-        ctx.lineTo(-s*0.4, s*0.6);
-        ctx.closePath();
+        ctx.ellipse(0, s*0.1, s*0.9, s*1.1, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 胸甲装甲分割线
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        // 机甲装甲线条
+        ctx.strokeStyle = '#00FFFF';
         ctx.lineWidth = s*0.03;
         ctx.beginPath();
-        ctx.moveTo(-s*0.3, -s*0.1);
-        ctx.lineTo(s*0.3, -s*0.1);
-        ctx.moveTo(0, -s*0.1);
-        ctx.lineTo(0, s*0.5);
+        ctx.moveTo(-s*0.5, -s*0.5);
+        ctx.lineTo(s*0.5, -s*0.5);
+        ctx.moveTo(-s*0.4, -s*0.2);
+        ctx.lineTo(s*0.4, -s*0.2);
         ctx.stroke();
 
-        // ===== 能量核心 =====
-        ctx.shadowColor = eyeColor;
-        ctx.shadowBlur = 25;
-        ctx.fillStyle = eyeColor;
+        // 胸口能量核心（发光）
+        ctx.fillStyle = '#00FFFF';
+        ctx.shadowColor = '#00FFFF';
+        ctx.shadowBlur = 15;
         ctx.beginPath();
-        ctx.arc(0, s*0.15, s*0.12, 0, Math.PI*2);
+        ctx.arc(0, s*0.1, s*0.15, 0, Math.PI*2);
         ctx.fill();
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 0;
 
-        // 核心外圈
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = s*0.02;
+        // 眼睛（红色发光）
+        ctx.fillStyle = '#FF0000';
+        ctx.shadowColor = '#FF0000';
+        ctx.shadowBlur = 10;
         ctx.beginPath();
-        ctx.arc(0, s*0.15, s*0.18, 0, Math.PI*2);
-        ctx.stroke();
+        ctx.ellipse(-s*0.3, -s*0.15, s*0.15, s*0.1, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.3, -s*0.15, s*0.15, s*0.1, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
 
-        // ===== 肩甲 =====
-        ctx.fillStyle = secondaryColor;
-        // 左肩甲
+        // 雷电标志（额头）
+        ctx.fillStyle = '#FFD700';
         ctx.beginPath();
-        ctx.moveTo(-s*0.55, -s*0.1);
-        ctx.lineTo(-s*1.0, -s*0.15);
-        ctx.lineTo(-s*0.9, s*0.35);
-        ctx.lineTo(-s*0.5, s*0.3);
+        ctx.moveTo(-s*0.1, -s*0.5);
+        ctx.lineTo(s*0.05, -s*0.4);
+        ctx.lineTo(-s*0.05, -s*0.4);
+        ctx.lineTo(s*0.1, -s*0.3);
+        ctx.lineTo(s*0, -s*0.3);
+        ctx.lineTo(s*0.05, -s*0.25);
+        ctx.lineTo(-s*0.1, -s*0.35);
+        ctx.lineTo(s*0, -s*0.35);
         ctx.closePath();
         ctx.fill();
-        // 右肩甲
+
+        // 机甲肩甲
+        ctx.fillStyle = '#4682B4';
         ctx.beginPath();
-        ctx.moveTo(s*0.55, -s*0.1);
-        ctx.lineTo(s*1.0, -s*0.15);
-        ctx.lineTo(s*0.9, s*0.35);
-        ctx.lineTo(s*0.5, s*0.3);
-        ctx.closePath();
+        ctx.moveTo(-s*0.8, -s*0.2);
+        ctx.lineTo(-s*1.1, s*0.2);
+        ctx.lineTo(-s*0.7, s*0.3);
+        ctx.lineTo(-s*0.6, -s*0.1);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(s*0.8, -s*0.2);
+        ctx.lineTo(s*1.1, s*0.2);
+        ctx.lineTo(s*0.7, s*0.3);
+        ctx.lineTo(s*0.6, -s*0.1);
         ctx.fill();
 
-        // 肩甲装饰线
-        ctx.strokeStyle = eyeColor;
-        ctx.lineWidth = s*0.015;
+        // 小手（机甲风格）
+        ctx.fillStyle = '#008B8B';
         ctx.beginPath();
-        ctx.moveTo(-s*0.8, 0);
-        ctx.lineTo(-s*0.7, s*0.2);
-        ctx.moveTo(s*0.8, 0);
-        ctx.lineTo(s*0.7, s*0.2);
-        ctx.stroke();
-
-        // ===== 机甲手臂 =====
-        // 左臂
-        const armGradient = ctx.createLinearGradient(-s*0.9, s*0.2, -s*0.7, s*0.5);
-        armGradient.addColorStop(0, color);
-        armGradient.addColorStop(1, secondaryColor);
-        ctx.fillStyle = armGradient;
-        ctx.beginPath();
-        ctx.ellipse(-s*0.85, s*0.4, s*0.18, s*0.25, -0.3, 0, Math.PI*2);
-        ctx.fill();
-        // 左手拳
-        ctx.fillStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.arc(-s*0.95, s*0.65, s*0.15, 0, Math.PI*2);
+        ctx.arc(-s*0.9, s*0.3, s*0.18, 0, Math.PI*2);
+        ctx.arc(s*0.9, s*0.3, s*0.18, 0, Math.PI*2);
         ctx.fill();
 
-        // 右臂
-        const armGradient2 = ctx.createLinearGradient(s*0.7, s*0.2, s*0.9, s*0.5);
-        armGradient2.addColorStop(0, secondaryColor);
-        armGradient2.addColorStop(1, color);
-        ctx.fillStyle = armGradient2;
+        // 脚（机甲推进器）
+        ctx.fillStyle = '#4682B4';
+        ctx.fillRect(-s*0.45, s*1.1, s*0.3, s*0.3);
+        ctx.fillRect(s*0.15, s*1.1, s*0.3, s*0.3);
+
+        // 推进器火焰效果
+        ctx.fillStyle = `rgba(0, 255, 255, ${0.5 + Math.sin(frameCount * 0.5) * 0.3})`;
         ctx.beginPath();
-        ctx.ellipse(s*0.85, s*0.4, s*0.18, s*0.25, 0.3, 0, Math.PI*2);
+        ctx.moveTo(-s*0.3, s*1.4);
+        ctx.lineTo(-s*0.45, s*1.7);
+        ctx.lineTo(-s*0.15, s*1.4);
         ctx.fill();
-        // 右手拳
-        ctx.fillStyle = secondaryColor;
         ctx.beginPath();
-        ctx.arc(s*0.95, s*0.65, s*0.15, 0, Math.PI*2);
+        ctx.moveTo(s*0.3, s*1.4);
+        ctx.lineTo(s*0.15, s*1.7);
+        ctx.lineTo(s*0.45, s*1.4);
         ctx.fill();
 
-        // ===== 机甲腿部 =====
-        // 左腿
-        ctx.fillStyle = color;
-        ctx.fillRect(-s*0.35, s*0.6, s*0.25, s*0.4);
-        // 左膝关节
-        ctx.fillStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.arc(-s*0.225, s*0.8, s*0.12, 0, Math.PI*2);
-        ctx.fill();
-        // 左脚
-        ctx.fillStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.ellipse(-s*0.25, s*1.05, s*0.25, s*0.12, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // 右腿
-        ctx.fillStyle = color;
-        ctx.fillRect(s*0.1, s*0.6, s*0.25, s*0.4);
-        // 右膝关节
-        ctx.fillStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.arc(s*0.225, s*0.8, s*0.12, 0, Math.PI*2);
-        ctx.fill();
-        // 右脚
-        ctx.fillStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.ellipse(s*0.25, s*1.05, s*0.25, s*0.12, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // ===== 特效 =====
-        // 背部喷射效果
-        ctx.fillStyle = eyeColor;
-        ctx.globalAlpha = 0.6 + Math.sin(frameCount * 0.3) * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(-s*0.3, s*0.7);
-        ctx.lineTo(-s*0.45, s*1.0);
-        ctx.lineTo(-s*0.15, s*0.7);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(s*0.3, s*0.7);
-        ctx.lineTo(s*0.45, s*1.0);
-        ctx.lineTo(s*0.15, s*0.7);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        ctx.restore();
-
-        // 变身剩余时间指示器
+        // 变身剩余时间指示器（移到角色下方）
         if (this.transformTimer > 0) {
-            ctx.fillStyle = eyeColor;
-            ctx.font = `bold ${s*0.3}px Arial`;
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+            ctx.font = `bold ${s*0.4}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*1.4);
+            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*1.5);
         }
     }
 
@@ -1967,48 +1554,6 @@ class Player {
                 ctx.fill();
                 ctx.fillRect(-s*0.2, -s*0.9, s*0.6, s*0.1);
                 break;
-
-            case 'leaf': // 小绿蛋的叶子
-                ctx.fillStyle = '#32CD32';
-                ctx.beginPath();
-                ctx.ellipse(0, -s*1.05, s*0.15, s*0.25, 0, 0, Math.PI*2);
-                ctx.fill();
-                ctx.strokeStyle = '#228B22';
-                ctx.lineWidth = s*0.02;
-                ctx.beginPath();
-                ctx.moveTo(0, -s*1.25);
-                ctx.lineTo(0, -s*0.85);
-                ctx.stroke();
-                break;
-
-            case 'star_hat': // 小紫蛋的星星装饰
-                ctx.fillStyle = '#FFD700';
-                // 画五角星
-                const drawStar = (cx, cy, spikes, outerRadius, innerRadius) => {
-                    let rot = Math.PI / 2 * 3;
-                    let x = cx;
-                    let y = cy;
-                    let step = Math.PI / spikes;
-
-                    ctx.beginPath();
-                    ctx.moveTo(cx, cy - outerRadius);
-                    for (let i = 0; i < spikes; i++) {
-                        x = cx + Math.cos(rot) * outerRadius;
-                        y = cy + Math.sin(rot) * outerRadius;
-                        ctx.lineTo(x, y);
-                        rot += step;
-
-                        x = cx + Math.cos(rot) * innerRadius;
-                        y = cy + Math.sin(rot) * innerRadius;
-                        ctx.lineTo(x, y);
-                        rot += step;
-                    }
-                    ctx.lineTo(cx, cy - outerRadius);
-                    ctx.closePath();
-                    ctx.fill();
-                };
-                drawStar(0, -s*1.1, 5, s*0.2, s*0.1);
-                break;
         }
     }
 }
@@ -2025,7 +1570,6 @@ function initCharSelect() {
         div.innerHTML = `
             <div class="char-emoji">${char.emoji}</div>
             <div class="char-name">${char.name}</div>
-            <div class="char-desc" style="font-size:10px;color:#aaa;margin-top:2px;">${char.description || ''}</div>
         `;
         div.onclick = () => selectChar(char.id);
         grid.appendChild(div);
@@ -2184,18 +1728,6 @@ function confirmSettings() {
     startGameAfterSelection();
 }
 
-// ==================== 音效控制 ====================
-function toggleMuteFromStart() {
-    AudioSys.init();
-    const isMuted = AudioSys.toggleMute();
-    const btn = document.getElementById('muteBtn');
-    btn.textContent = isMuted ? '🔇 音效: 关' : '🔊 音效: 开';
-    // 如果开启音效，播放一个测试音
-    if (!isMuted) {
-        AudioSys.playClick();
-    }
-}
-
 // ==================== 糖果/金币类 ====================
 class Coin {
     constructor(x,y,type='COIN') { this.x=x; this.y=y; this.t=Math.random(); this.get=false; this.type=type; }
@@ -2221,13 +1753,19 @@ class QBlock {
         const rand = Math.random();
         // 道具生成概率：火力增强道具（15%）+ 其他道具（85%）
         // 火力增强道具概率低于计算题（30%出道具，70%计算题）
-        if (rand < 0.05) this.itemType = 'ELECTRIC';      // 5% 电击弹
-        else if (rand < 0.10) this.itemType = 'SPREAD';   // 5% 散弹枪
-        else if (rand < 0.15) this.itemType = 'FLAME';    // 5% 火龙炮
-        else if (rand < 0.35) this.itemType = 'STAR';     // 20% 星星
-        else if (rand < 0.55) this.itemType = 'SUNFLOWER';// 20% 向日葵
-        else if (rand < 0.80) this.itemType = 'COIN';     // 25% 金币
-        else this.itemType = 'DIAMOND';                   // 20% 钻石
+        if (rand < 0.04) this.itemType = 'ELECTRIC';      // 4% 电击弹
+        else if (rand < 0.08) this.itemType = 'SPREAD';    // 4% 散弹枪
+        else if (rand < 0.12) this.itemType = 'FLAME';     // 4% 火龙炮
+        else if (rand < 0.16) this.itemType = 'ICE';       // 4% 冰冻弹
+        else if (rand < 0.20) this.itemType = 'BUBBLE';   // 4% 水泡泡
+        else if (rand < 0.24) this.itemType = 'LASER';     // 4% 激光炮
+        else if (rand < 0.28) this.itemType = 'MISSILE';  // 4% 追踪导弹
+        else if (rand < 0.32) this.itemType = 'POISON';   // 4% 毒液弹
+        else if (rand < 0.36) this.itemType = 'RAINBOW';  // 4% 彩虹弹
+        else if (rand < 0.50) this.itemType = 'STAR';      // 14% 星星
+        else if (rand < 0.65) this.itemType = 'SUNFLOWER'; // 15% 向日葵
+        else if (rand < 0.85) this.itemType = 'COIN';     // 20% 金币
+        else this.itemType = 'DIAMOND';                     // 15% 钻石
         this.itemSpawned = false;
     }
 
@@ -2383,19 +1921,23 @@ class Bullet {
         // 根据类型设置属性
         switch(type) {
             case 'electric':
-                this.r = 8;
-                this.vx = direction * 12; // 更快
-                this.damage = 2; // 双倍伤害
-                break;
+                this.r = 8; this.vx = direction * 12; this.damage = 2; break;
             case 'spread':
-                this.r = 10;
-                this.damage = 1;
-                break;
+                this.r = 10; this.damage = 1; break;
             case 'flame':
-                this.r = 12;
-                this.vx = direction * 6; // 较慢但范围大
-                this.damage = 3; // 高伤害
-                break;
+                this.r = 12; this.vx = direction * 6; this.damage = 3; break;
+            case 'ice':
+                this.r = 9; this.vx = direction * 10; this.damage = 1; this.frozen = 180; break;
+            case 'bubble':
+                this.r = 14; this.vx = direction * 9; this.damage = 1; this.bounce = 0; break;
+            case 'laser':
+                this.r = 5; this.vx = direction * 20; this.damage = 1; break;
+            case 'missile':
+                this.r = 8; this.vx = direction * 7; this.vy = 0; this.damage = 2; this.homing = true; break;
+            case 'poison':
+                this.r = 7; this.vx = direction * 8; this.damage = 1; this.poisonTick = 30; break;
+            case 'rainbow':
+                this.r = 11; this.vx = direction * 9; this.damage = 1; this.splitCount = 0; break;
             default:
                 this.damage = 1;
         }
@@ -2404,12 +1946,35 @@ class Bullet {
     update() {
         if (this.dead) return;
 
+        // 追踪导弹：寻找最近敌人并调整方向
+        if (this.homing && this.type === 'missile') {
+            let nearest = null, nearestDist = Infinity;
+            for (let e of enemies) {
+                if (!e.dead) {
+                    const dist = Math.hypot(this.x - e.x, this.y - e.y);
+                    if (dist < nearestDist) { nearestDist = dist; nearest = e; }
+                }
+            }
+            if (nearest) {
+                const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+                this.vx = Math.cos(angle) * 8;
+                this.vy = Math.sin(angle) * 8;
+            }
+        }
+
+        // 水泡泡：上下弹跳效果
+        if (this.type === 'bubble') {
+            this.y += this.vy;
+            this.vy += 0.3;
+            if (this.y > 450) { this.y = 450; this.vy *= -0.8; this.bounce++; }
+            if (this.bounce > 3) { this.dead = true; return; }
+        }
+
         this.x += this.vx;
-        this.y += this.vy;
         this.life--;
 
         // 超出寿命或超出边界
-        if (this.life <= 0 || this.x < cam || this.x > cam + cvs.width + 100) {
+        if (this.life <= 0 || this.x < cam - 50 || this.x > cam + cvs.width + 100 || this.y > cvs.height + 50) {
             this.dead = true;
             return;
         }
@@ -2417,45 +1982,43 @@ class Bullet {
         // 检测与敌人碰撞
         for (let e of enemies) {
             if (!e.dead && Math.hypot(this.x - e.x, this.y - e.y) < 25) {
-                // 火龙炮有范围伤害效果
+                // 火龙炮：范围伤害
                 if (this.type === 'flame') {
-                    // 范围伤害 - 同时伤害附近的敌人
                     enemies.forEach(nearby => {
                         if (!nearby.dead && Math.hypot(this.x - nearby.x, this.y - nearby.y) < 60) {
                             for (let i = 0; i < this.damage; i++) {
-                                if (nearby.hit()) {
-                                    score += 100;
-                                    updateUI();
-                                    AudioSys.playCoin();
-                                    break;
-                                }
+                                if (nearby.hit()) { score += 100; updateUI(); AudioSys.playCoin(); break; }
                             }
                         }
                     });
-                    this.dead = true;
-                    return;
+                    this.dead = true; return;
                 }
 
-                // 普通和电击、散弹的单体伤害
+                // 冰冻弹：冻结敌人
+                if (this.type === 'ice' && e.freezeTime === undefined) {
+                    e.freezeTime = 180;
+                    e.speed = 0;
+                }
+
                 let killed = false;
                 for (let i = 0; i < this.damage; i++) {
-                    if (e.hit()) {
-                        killed = true;
-                    }
+                    if (e.hit()) { killed = true; }
                 }
 
-                if (killed) {
-                    // 敌人死亡，加分
-                    score += 100;
-                    updateUI();
-                    AudioSys.playCoin();
+                // 毒液弹：持续伤害
+                if (this.type === 'poison' && !killed) {
+                    if (!e.poisonTimer) e.poisonTimer = 0;
+                    e.poisonTimer += 60;
+                }
+
+                if (killed) { score += 100; updateUI(); AudioSys.playCoin(); }
+
+                // 电击弹、激光、水泡泡可穿透
+                if (this.type === 'electric' || this.type === 'laser') {
+                    // 穿透，不死亡
+                } else if (this.type === 'bubble') {
+                    if (this.bounce > 2) this.dead = true;
                 } else {
-                    // 敌人受伤
-                    AudioSys.playHit();
-                }
-
-                // 电击弹可以穿透（不死亡），其他子弹死亡
-                if (this.type !== 'electric') {
                     this.dead = true;
                 }
                 return;
@@ -2512,17 +2075,93 @@ class Bullet {
                 ctx.shadowColor = '#FF8C00';
                 ctx.shadowBlur = 20;
                 ctx.fillStyle = '#FF8C00';
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#FF4500';
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#FFD700';
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+
+            case 'ice':
+                // 冰冻弹 - 冰蓝色晶体
+                ctx.shadowColor = '#87CEEB';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#87CEEB';
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.5, 0, Math.PI * 2); ctx.fill();
+                // 六边形冰晶
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2);
-                ctx.fill();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    const px = Math.cos(angle) * (this.r + 5);
+                    const py = Math.sin(angle) * (this.r + 5);
+                    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                break;
+
+            case 'bubble':
+                // 水泡泡 - 半透明泡泡
+                ctx.shadowColor = 'rgba(0,200,255,0.5)';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = 'rgba(0,200,255,0.3)';
+                ctx.strokeStyle = 'rgba(0,200,255,0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                // 反光高光
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.beginPath(); ctx.arc(-this.r*0.3, -this.r*0.3, this.r*0.3, 0, Math.PI * 2); ctx.fill();
+                break;
+
+            case 'laser':
+                // 激光炮 - 细长蓝光束
+                ctx.shadowColor = '#00FFFF';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = '#00FFFF';
+                ctx.beginPath(); ctx.ellipse(0, 0, this.r + 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath(); ctx.ellipse(0, 0, this.r + 6, 2, 0, 0, Math.PI * 2); ctx.fill();
+                break;
+
+            case 'missile':
+                // 追踪导弹 - 银色锥形
+                ctx.shadowColor = '#888';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#C0C0C0';
+                ctx.beginPath(); ctx.moveTo(this.vx > 0 ? this.r : -this.r, 0); ctx.lineTo(this.vx > 0 ? -this.r : this.r, -5); ctx.lineTo(this.vx > 0 ? -this.r : this.r, 5); ctx.closePath(); ctx.fill();
+                // 尾焰
+                ctx.fillStyle = '#FF4500';
+                ctx.beginPath(); ctx.arc(this.vx > 0 ? -this.r : this.r, 0, 5, 0, Math.PI * 2); ctx.fill();
+                break;
+
+            case 'poison':
+                // 毒液弹 - 绿色粘液球
+                ctx.shadowColor = '#32CD32';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#32CD32';
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath(); ctx.arc(-2, -2, this.r * 0.5, 0, Math.PI * 2); ctx.fill();
+                // 毒泡
+                ctx.fillStyle = 'rgba(50,205,50,0.5)';
+                ctx.beginPath(); ctx.arc(5, -4, 3, 0, Math.PI * 2); ctx.fill();
+                break;
+
+            case 'rainbow':
+                // 彩虹弹 - 七彩旋转
+                const hue = (frameCount * 5) % 360;
+                ctx.shadowColor = `hsl(${hue},100%,60%)`;
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = `hsl(${hue},100%,60%)`;
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = `hsl(${(hue+120)%360},100%,60%)`;
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = `hsl(${(hue+240)%360},100%,60%)`;
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
                 break;
 
             default:
@@ -2530,24 +2169,24 @@ class Bullet {
                 ctx.shadowColor = '#FFD700';
                 ctx.shadowBlur = 10;
                 ctx.fillStyle = '#FFD700';
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#FF6B00';
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r * 0.6, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.6, 0, Math.PI * 2); ctx.fill();
         }
 
-        // 尾焰效果
-        const tailLen = this.type === 'flame' ? 25 : 15;
-        const tailDir = this.vx > 0 ? -1 : 1;
-        ctx.fillStyle = `rgba(255, 100, 0, ${this.life / 60})`;
-        ctx.beginPath();
-        ctx.moveTo(tailDir * tailLen, -3);
-        ctx.lineTo(0, 0);
-        ctx.lineTo(tailDir * tailLen, 3);
-        ctx.fill();
+        // 尾焰效果（部分武器有特殊尾焰）
+        if (this.type !== 'bubble' && this.type !== 'laser' && this.type !== 'missile') {
+            const tailLen = this.type === 'flame' ? 25 : (this.type === 'rainbow' ? 18 : 15);
+            const tailDir = this.vx > 0 ? -1 : 1;
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = `rgba(255, 100, 0, ${this.life / 60})`;
+            ctx.beginPath();
+            ctx.moveTo(tailDir * tailLen, -3);
+            ctx.lineTo(0, 0);
+            ctx.lineTo(tailDir * tailLen, 3);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         ctx.restore();
     }
@@ -2565,6 +2204,26 @@ class Enemy {
     }
     update() {
         if (this.dead) return;
+
+        // 冻结效果
+        if (this.freezeTime > 0) {
+            this.freezeTime--;
+            if (this.freezeTime <= 0) { this.speed = 1.5; }
+            return;
+        }
+
+        // 毒液持续伤害
+        if (this.poisonTimer > 0) {
+            this.poisonTimer--;
+            if (this.poisonTimer % 30 === 0 && this.hp > 1) {
+                this.hp--;
+                this.hitFlash = 5;
+                score += 20;
+                updateUI();
+                if (this.hp <= 0) { this.dead = true; score += 100; updateUI(); AudioSys.playCoin(); return; }
+            }
+        }
+
         this.x += this.speed * this.dir;
         if (this.x > this.startX + this.patrolDist || this.x < this.startX - this.patrolDist) {
             this.dir *= -1;
@@ -2595,6 +2254,23 @@ class Enemy {
         ctx.fillRect(-12, 15, 8, 8);
         ctx.fillRect(4, 15, 8, 8);
 
+        // 冻结特效
+        if (this.freezeTime > 0) {
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-17, -17, 34, 34);
+            ctx.fillStyle = 'rgba(135,206,235,0.3)';
+            ctx.fillRect(-17, -17, 34, 34);
+        }
+
+        // 毒液特效
+        if (this.poisonTimer > 0 && this.poisonTimer % 10 < 5) {
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath(); ctx.arc(-10, -20, 4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8, -10, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 15, 3, 0, Math.PI*2); ctx.fill();
+        }
+
         ctx.globalAlpha = 1;
         ctx.fillStyle = 'red';
         ctx.fillRect(-15, -28, 30, 6);
@@ -2623,7 +2299,7 @@ class BirdEnemy {
         this.y = y;
         this.w = 25;
         this.h = 20;
-        this.speed = 0.05 + Math.random() * 0.1; // 速度0.05-0.15，超慢便于玩家瞄准攻击
+        this.speed = 0.08 + Math.random() * 0.15; // 速度0.08-0.23，略快一些
         this.dead = false;
         this.hp = 3;
         this.hitFlash = 0;
@@ -2631,13 +2307,16 @@ class BirdEnemy {
         this.wingSpeed = 0.2 + Math.random() * 0.1;
         this.yOffset = 0;
         this.yBase = y;
+        this.floatPhase = Math.random() * Math.PI * 2; // 随机浮动相位
     }
 
     update() {
         if (this.dead) return;
         this.x -= this.speed; // 向左飞行
         this.wingAngle += this.wingSpeed;
-        this.yOffset = Math.sin(this.wingAngle * 2) * 10;
+        // 上下浮动效果，更明显
+        this.floatPhase += 0.04;
+        this.yOffset = Math.sin(this.floatPhase) * 20;
         this.y = this.yBase + this.yOffset;
         if (this.hitFlash > 0) this.hitFlash--;
     }
@@ -2716,81 +2395,50 @@ class BirdEnemy {
     }
 }
 
-// ==================== 变身礼物盒子类 ====================
-class MechaGiftBox {
+// ==================== 特殊变身箱子类 ====================
+class SpecialTransformBox {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.done = false;
         this.pulse = 0;
-        this.bounce = 0;
     }
 
     draw() {
         if (this.done) return;
 
-        this.pulse += 0.08;
-        this.bounce += 0.15;
-        const glow = Math.sin(this.pulse) * 0.4 + 0.8;
-        const bounceY = Math.sin(this.bounce) * 3;
+        this.pulse += 0.1;
+        const glow = Math.sin(this.pulse) * 0.3 + 0.7;
 
         ctx.save();
-        ctx.translate(this.x - cam, this.y + bounceY);
+        ctx.translate(this.x - cam, this.y);
 
         // 发光效果
-        ctx.shadowColor = '#FF69B4';
-        ctx.shadowBlur = 25 * glow;
+        ctx.shadowColor = '#00FFFF';
+        ctx.shadowBlur = 20 * glow;
 
-        // 礼物盒子主体 - 粉色礼盒
-        const boxGradient = ctx.createLinearGradient(-30, -30, 30, 30);
-        boxGradient.addColorStop(0, '#FF69B4');
-        boxGradient.addColorStop(0.5, '#FF1493');
-        boxGradient.addColorStop(1, '#C71585');
-        ctx.fillStyle = boxGradient;
-        ctx.fillRect(-30, -25, 60, 50);
+        // 特殊箱子（青色带闪电）
+        ctx.fillStyle = `rgba(0, 255, 255, ${glow})`;
+        ctx.fillRect(-25, -25, 50, 50);
 
         ctx.shadowBlur = 0;
 
-        // 礼物盒子金色边框
+        // 边框
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 3;
-        ctx.strokeRect(-30, -25, 60, 50);
+        ctx.strokeRect(-25, -25, 50, 50);
 
-        // 礼物丝带 - 横向
+        // 闪电图标
         ctx.fillStyle = '#FFD700';
-        ctx.fillRect(-30, -8, 60, 16);
-
-        // 礼物丝带 - 纵向
-        ctx.fillRect(-8, -25, 16, 50);
-
-        // 蝴蝶结
-        ctx.fillStyle = '#FFD700';
-        // 左蝴蝶结
         ctx.beginPath();
-        ctx.ellipse(-15, -25, 12, 8, -0.5, 0, Math.PI * 2);
+        ctx.moveTo(-5, -15);
+        ctx.lineTo(8, -2);
+        ctx.lineTo(-2, -2);
+        ctx.lineTo(5, 15);
+        ctx.lineTo(-8, 2);
+        ctx.lineTo(2, 2);
+        ctx.closePath();
         ctx.fill();
-        // 右蝴蝶结
-        ctx.beginPath();
-        ctx.ellipse(15, -25, 12, 8, 0.5, 0, Math.PI * 2);
-        ctx.fill();
-        // 蝴蝶结中心
-        ctx.beginPath();
-        ctx.arc(0, -25, 6, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 机甲图标
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🤖', 0, 5);
-
-        // 闪光效果
-        if (glow > 0.9) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.beginPath();
-            ctx.arc(-20, -15, 4, 0, Math.PI * 2);
-            ctx.fill();
-        }
 
         ctx.restore();
     }
@@ -2907,20 +2555,11 @@ function initPlatformer() {
     bullets = [];
     lastFireTime = 0;
 
-    // 创建机甲礼物盒子（2-3个随机位置）
+    // 创建特殊变身箱子（随机位置）
     const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
-    const numGiftBoxes = 2 + Math.floor(Math.random() * 2); // 2或3个
-    mechaGiftBoxes = [];
-
-    for (let i = 0; i < numGiftBoxes; i++) {
-        // 随机位置：从关卡1/5开始到4/5结束，避免起点和终点太近
-        const minX = levelLength * 0.15;
-        const maxX = levelLength * 0.85;
-        const boxX = minX + Math.random() * (maxX - minX);
-        // 随机高度：地面上或平台上
-        const boxY = Math.random() > 0.5 ? 280 : 200 + Math.random() * 100;
-        mechaGiftBoxes.push(new MechaGiftBox(boxX, boxY));
-    }
+    const randomX = 2000 + Math.random() * (levelLength - 4000); // 在关卡中间随机位置
+    const randomY = 200 + Math.random() * 200;
+    specialTransformBox = new SpecialTransformBox(randomX, randomY);
 }
 
 function updateProgressBar() {
@@ -2981,14 +2620,9 @@ function updatePlatformer(timestamp) {
                 player.invincible = 120;
                 AudioSys.playFail();
             } else {
-                // 被怪兽击败 - 清除所有道具效果
-                player.isTransformed = false;
-                player.transformTimer = 0;
-                currentMecha = null;
-                playerFireMode = 'normal';
-                fireModeTimer = 0;
                 AudioSys.playFail();
                 state = 'over';
+                playerFireMode = 'normal'; // 被击败时火力重置
                 setTimeout(() => restart(), 50);
                 return;
             }
@@ -3020,6 +2654,12 @@ function updatePlatformer(timestamp) {
                 showHint(q.itemType === 'ELECTRIC' ? '⚡ 电击弹!' :
                          q.itemType === 'SPREAD' ? '🔥 散弹枪!' :
                          q.itemType === 'FLAME' ? '🐉 火龙炮!' :
+                         q.itemType === 'ICE' ? '❄️ 冰冻弹!' :
+                         q.itemType === 'BUBBLE' ? '🫧 水泡泡!' :
+                         q.itemType === 'LASER' ? '⚡ 激光炮!' :
+                         q.itemType === 'MISSILE' ? '🚀 追踪导弹!' :
+                         q.itemType === 'POISON' ? '☠️ 毒液弹!' :
+                         q.itemType === 'RAINBOW' ? '🌈 彩虹弹!' :
                          q.itemType === 'STAR' ? '⭐ 星星!' :
                          q.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                          q.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
@@ -3029,14 +2669,14 @@ function updatePlatformer(timestamp) {
         }
     }
 
-    // 机甲礼物盒子碰撞检测
-    for (let box of mechaGiftBoxes) {
-        if (!box.done && Math.hypot(player.x - box.x, player.y - box.y) < 45) {
-            box.done = true;
+    // 特殊变身箱子碰撞检测
+    if (specialTransformBox && !specialTransformBox.done) {
+        if (Math.hypot(player.x - specialTransformBox.x, player.y - specialTransformBox.y) < 45) {
+            specialTransformBox.done = true;
             player.isTransformed = true;
+            player.transformTimer = 600; // 10秒 (60fps * 10)
             AudioSys.playTransform();
-            showTransformSelection();
-            break;
+            showHint('⚡ 变身为炫蓝雷霆！');
         }
     }
 
@@ -3094,8 +2734,8 @@ function drawPlatformer() {
     for (let b of bullets) b.draw();
     for (let q of questions) q.draw();
 
-    // 绘制机甲礼物盒子
-    for (let box of mechaGiftBoxes) box.draw();
+    // 绘制特殊变身箱子
+    if (specialTransformBox) specialTransformBox.draw();
 
     // 旗帜 - 如果强制解锁模式且箱子未全开，显示锁定
     const isLocked = requireAllBoxes && unlockedBoxes < totalBoxes;
@@ -3125,160 +2765,23 @@ function drawPlatformer() {
         ctx.fill();
     }
 
-    // 绘制指向礼物盒子的指示器（指向最近的一个未开启的盒子）
-    if (!player.isTransformed) {
-        // 找到最近的未开启礼物盒子
-        let nearestBox = null;
-        let nearestDist = Infinity;
-        for (let box of mechaGiftBoxes) {
-            if (!box.done) {
-                const dist = Math.abs(box.x - player.x);
-                if (dist < nearestDist) {
-                    nearestDist = dist;
-                    nearestBox = box;
-                }
-            }
-        }
-
-        if (nearestBox) {
-            const boxScreenX = nearestBox.x - cam;
-            // 当盒子在屏幕外时显示箭头
-            if (boxScreenX < 0 || boxScreenX > cvs.width) {
-                const arrowX = boxScreenX < 0 ? 30 : cvs.width - 30;
-                const arrowDir = boxScreenX < 0 ? -1 : 1;
-
-                ctx.save();
-                ctx.translate(arrowX, 80);
-                ctx.scale(arrowDir, 1);
-
-                // 发光背景（粉色，配合礼物盒子）
-                ctx.shadowColor = '#FF69B4';
-                ctx.shadowBlur = 15;
-                ctx.fillStyle = 'rgba(255, 105, 180, 0.3)';
-                ctx.beginPath();
-                ctx.arc(0, 0, 25, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 箭头
-                ctx.fillStyle = '#FF69B4';
-                ctx.beginPath();
-                ctx.moveTo(-10, -15);
-                ctx.lineTo(15, 0);
-                ctx.lineTo(-10, 15);
-                ctx.closePath();
-                ctx.fill();
-
-                // 礼物图标
-                ctx.scale(arrowDir, 1);
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('🎁', 0, 5);
-
-                ctx.restore();
-            }
-        }
-    }
-
     player.draw();
 
-    // 绘制当前火力模式（永久有效）
+    // 绘制当前火力模式（永久显示）
     if (playerFireMode !== 'normal') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(10, 100, 120, 35);
+        ctx.fillRect(10, 100, 130, 30);
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'left';
-        const modeName = playerFireMode === 'electric' ? '⚡电击弹' :
-                        playerFireMode === 'spread' ? '🔥散弹枪' : '🐉火龙炮';
-        ctx.fillText(modeName, 15, 115);
-        ctx.fillStyle = '#00FF00';
-        ctx.font = '12px Arial';
-        ctx.fillText('∞ 永久', 15, 128);
+        const modeNames = {
+            electric: '⚡电击弹', spread: '🔥散弹枪', flame: '🐉火龙炮',
+            ice: '❄️冰冻弹', bubble: '🫧水泡泡', laser: '⚡激光炮',
+            missile: '🚀追踪导弹', poison: '☠️毒液弹', rainbow: '🌈彩虹弹'
+        };
+        ctx.fillText(modeNames[playerFireMode] || playerFireMode, 15, 120);
+        ctx.textAlign = 'start';
     }
-}
-
-// ==================== 机甲选择界面 ====================
-function showTransformSelection() {
-    // 暂停游戏
-    const wasPlaying = state === 'play';
-    state = 'q';
-
-    const mechaSelect = document.getElementById('mechaSelect');
-    const mechaGrid = document.getElementById('mechaGrid');
-
-    // 随机选择3个不同的机甲
-    const shuffled = [...MECHA_CHARACTERS].sort(() => Math.random() - 0.5);
-    const selectedMechas = shuffled.slice(0, 3);
-
-    mechaGrid.innerHTML = '';
-
-    selectedMechas.forEach((mecha, index) => {
-        const card = document.createElement('div');
-        card.style.cssText = `
-            width: 120px;
-            height: 160px;
-            background: linear-gradient(135deg, ${mecha.color}, ${mecha.secondaryColor});
-            border: 3px solid ${mecha.color};
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 20px ${mecha.color}80;
-        `;
-
-        // 机甲图标
-        const icon = document.createElement('div');
-        icon.textContent = mecha.emoji;
-        icon.style.cssText = 'font-size: 50px; margin-bottom: 8px;';
-
-        // 机甲名称
-        const name = document.createElement('div');
-        name.textContent = mecha.name;
-        name.style.cssText = 'font-size: 14px; font-weight: bold; color: white; text-align: center;';
-
-        // 机甲描述
-        const desc = document.createElement('div');
-        desc.textContent = mecha.description;
-        desc.style.cssText = 'font-size: 10px; color: rgba(255,255,255,0.8); text-align: center; margin-top: 5px; padding: 0 5px;';
-
-        card.appendChild(icon);
-        card.appendChild(name);
-        card.appendChild(desc);
-
-        // 悬停效果
-        card.onmouseenter = () => {
-            card.style.transform = 'scale(1.1)';
-            card.style.boxShadow = `0 0 30px ${mecha.color}`;
-        };
-        card.onmouseleave = () => {
-            card.style.transform = 'scale(1)';
-            card.style.boxShadow = `0 0 20px ${mecha.color}80`;
-        };
-
-        // 点击选择
-        card.onclick = () => {
-            selectMecha(mecha);
-        };
-
-        mechaGrid.appendChild(card);
-    });
-
-    mechaSelect.style.display = 'flex';
-}
-
-function selectMecha(mecha) {
-    currentMecha = mecha;
-    player.isTransformed = true;
-    player.transformTimer = 600; // 10秒 (60fps * 10)
-
-    document.getElementById('mechaSelect').style.display = 'none';
-    state = 'play';
-
-    AudioSys.playTransform();
-    showHint(`⚡ ${mecha.name}！`);
 }
 
 // 提示系统
@@ -3345,6 +2848,12 @@ function answer(block, sel) {
             showHint(block.itemType === 'ELECTRIC' ? '⚡ 电击弹!' :
                      block.itemType === 'SPREAD' ? '🔥 散弹枪!' :
                      block.itemType === 'FLAME' ? '🐉 火龙炮!' :
+                     block.itemType === 'ICE' ? '❄️ 冰冻弹!' :
+                     block.itemType === 'BUBBLE' ? '🫧 水泡泡!' :
+                     block.itemType === 'LASER' ? '⚡ 激光炮!' :
+                     block.itemType === 'MISSILE' ? '🚀 追踪导弹!' :
+                     block.itemType === 'POISON' ? '☠️ 毒液弹!' :
+                     block.itemType === 'RAINBOW' ? '🌈 彩虹弹!' :
                      block.itemType === 'STAR' ? '⭐ 星星!' :
                      block.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                      block.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
@@ -3361,8 +2870,8 @@ function collectItem(type) {
         score += item.score; AudioSys.playCoin();
     } else if (item.effect === 'fireMode') {
         playerFireMode = item.mode;
-        fireModeTimer = 0;
         AudioSys.playTransform();
+        showHint(`${item.emoji} ${item.name}！火力强化！`);
     } else if (item.effect === 'invincible') {
         player.invincible = 300; AudioSys.playTransform();
     }
@@ -3385,8 +2894,8 @@ function startElimination() {
     elimTarget = Math.floor(Math.random() * 6) + 5;
     document.getElementById('elimTargetNum').textContent = elimTarget;
     document.getElementById('targetNum').textContent = elimTarget;
-    // 背景音效已禁用
-    // AudioSys.startBGM();
+    // 启动背景音乐
+    AudioSys.startBGM();
     elimLoop();
 }
 
@@ -4008,8 +3517,8 @@ function startCircusGame() {
     // 初始化游戏
     initCircus();
 
-    // 背景音效已禁用
-    // AudioSys.startBGM();
+    // 启动背景音乐
+    AudioSys.startBGM();
 
     // 开始游戏循环
     circusLoop();
@@ -4448,8 +3957,8 @@ function startGameAfterSelection() {
     state = 'play'; initPlatformer();
     lastTime = 0;
     frameCount = 0;
-    // 背景音效已禁用
-    // AudioSys.startBGM();
+    // 启动背景音乐
+    AudioSys.startBGM();
     loop();
 }
 
@@ -4490,7 +3999,7 @@ function restart() {
     ['ArrowLeft', 'ArrowRight', 'Space', 'KeyF'].forEach(k => keys[k] = false);
     if (gameMode === 'platformer') {
         level = 1; score = 0; candies = 0;
-        // 确保玩家状态被重置（包括道具效果）
+        // 确保玩家速度被重置
         if (player) {
             player.vx = 0;
             player.vy = 0;
@@ -4501,10 +4010,6 @@ function restart() {
             player.j = 0;
             player.g = false;
         }
-        // 重置火力模式和机甲
-        playerFireMode = 'normal';
-        fireModeTimer = 0;
-        currentMecha = null;
         // 清除所有游戏对象
         bullets = [];
         items = [];
@@ -4591,17 +4096,7 @@ function closeVictory() {
 }
 
 function pauseGame() {
-    if (state === 'play') {
-        state = 'pause';
-        document.getElementById('pause').style.display = 'flex';
-        // 暂停时停止背景音乐
-        AudioSys.stopBGM();
-        // 更新音效按钮状态
-        const pauseMuteBtn = document.getElementById('pauseMuteBtn');
-        if (pauseMuteBtn) {
-            pauseMuteBtn.textContent = AudioSys.isMuted ? '🔇 音效' : '🔊 音效';
-        }
-    }
+    if (state === 'play') { state = 'pause'; document.getElementById('pause').style.display = 'flex'; }
 }
 
 function resumeGame() {
@@ -4609,21 +4104,8 @@ function resumeGame() {
         state = 'play';
         document.getElementById('pause').style.display = 'none';
         lastTime = 0;
-        // 背景音效已禁用
-        // AudioSys.startBGM();
         if (gameMode === 'platformer') loop();
         else if (gameMode === 'elimination') elimLoop();
-    }
-}
-
-function toggleMuteFromPause() {
-    const isMuted = AudioSys.toggleMute();
-    const btn = document.getElementById('pauseMuteBtn');
-    btn.textContent = isMuted ? '🔇 音效' : '🔊 音效';
-    // 同步开始界面的按钮状态
-    const startBtn = document.getElementById('muteBtn');
-    if (startBtn) {
-        startBtn.textContent = isMuted ? '🔇 音效: 关' : '🔊 音效: 开';
     }
 }
 
@@ -4643,6 +4125,7 @@ function backToMenu() {
     selectedChar = null;
     selectedVehicle = null;
     selectedDifficulty = null;
+    playerFireMode = 'normal';
     requireAllBoxes = false;
 }
 
@@ -4700,22 +4183,42 @@ function fireBullet() {
 
         case 'flame':
             // 火龙炮 - 大型慢速高伤害
-            bullets.push(new Bullet(
-                player.x + direction * 35,
-                player.y,
-                direction,
-                'flame'
-            ));
+            bullets.push(new Bullet(player.x + direction * 35, player.y, direction, 'flame'));
+            break;
+
+        case 'ice':
+            // 冰冻弹 - 冻结敌人
+            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'ice'));
+            break;
+
+        case 'bubble':
+            // 水泡泡 - 弹跳穿透
+            bullets.push(new Bullet(player.x + direction * 30, player.y - 10, direction, 'bubble'));
+            bullets[bullets.length-1].vy = -3;
+            break;
+
+        case 'laser':
+            // 激光炮 - 超高速穿透
+            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'laser'));
+            break;
+
+        case 'missile':
+            // 追踪导弹 - 自动追踪敌人
+            bullets.push(new Bullet(player.x + direction * 20, player.y, direction, 'missile'));
+            break;
+
+        case 'poison':
+            // 毒液弹 - 持续伤害
+            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'poison'));
+            break;
+
+        case 'rainbow':
+            // 彩虹弹 - 多彩效果
+            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'rainbow'));
             break;
 
         default:
-            // 普通炮弹
-            bullets.push(new Bullet(
-                player.x + direction * 30,
-                player.y,
-                direction,
-                'normal'
-            ));
+            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'normal'));
     }
 
     AudioSys.playFire();
