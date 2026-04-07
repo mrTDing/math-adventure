@@ -432,6 +432,36 @@ const CHARACTERS = [
         hat: 'crown_gold',
         face: 'confident',
         accessory: 'microphone'
+    },
+    {
+        id: 'mario',
+        name: '马里奥',
+        emoji: '🔴',
+        color: '#FF0000',
+        secondaryColor: '#FF4444',
+        hat: 'mario_cap',
+        face: 'mario',
+        accessory: 'mustache'
+    },
+    {
+        id: 'luigi',
+        name: '路易吉',
+        emoji: '🟢',
+        color: '#00AA00',
+        secondaryColor: '#32CD32',
+        hat: 'luigi_cap',
+        face: 'luigi',
+        accessory: 'mustache'
+    },
+    {
+        id: 'yoshi',
+        name: '耀西',
+        emoji: '🦖',
+        color: '#32CD32',
+        secondaryColor: '#90EE90',
+        hat: 'yoshi_saddle',
+        face: 'yoshi',
+        accessory: 'none'
     }
 ];
 
@@ -1194,6 +1224,119 @@ class Player {
                 ctx.stroke();
                 break;
 
+            case 'mario': // 马里奥表情
+                // 大眼睛
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(-s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
+                ctx.ellipse(s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 蓝色眼珠
+                ctx.fillStyle = '#4169E1';
+                ctx.beginPath();
+                ctx.arc(-s*0.25, -s*0.12, s*0.12, 0, Math.PI*2);
+                ctx.arc(s*0.32, -s*0.12, s*0.12, 0, Math.PI*2);
+                ctx.fill();
+                // 黑色瞳孔
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.arc(-s*0.25, -s*0.12, s*0.06, 0, Math.PI*2);
+                ctx.arc(s*0.32, -s*0.12, s*0.06, 0, Math.PI*2);
+                ctx.fill();
+                // 高光
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-s*0.22, -s*0.18, s*0.04, 0, Math.PI*2);
+                ctx.arc(s*0.35, -s*0.18, s*0.04, 0, Math.PI*2);
+                ctx.fill();
+                // 大鼻子
+                ctx.fillStyle = '#FFAA88';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.05, s*0.18, s*0.14, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 微笑
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = s*0.05;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, s*0.12, s*0.15, 0.3, Math.PI-0.3);
+                ctx.stroke();
+                break;
+
+            case 'luigi': // 路易吉表情（类似马里奥但稍微不同）
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(-s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
+                ctx.ellipse(s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#4169E1';
+                ctx.beginPath();
+                ctx.arc(-s*0.28, -s*0.12, s*0.12, 0, Math.PI*2);
+                ctx.arc(s*0.3, -s*0.12, s*0.12, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.arc(-s*0.28, -s*0.12, s*0.06, 0, Math.PI*2);
+                ctx.arc(s*0.3, -s*0.12, s*0.06, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-s*0.25, -s*0.18, s*0.04, 0, Math.PI*2);
+                ctx.arc(s*0.33, -s*0.18, s*0.04, 0, Math.PI*2);
+                ctx.fill();
+                // 鼻子
+                ctx.fillStyle = '#FFAA88';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.05, s*0.16, s*0.12, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 路易吉的嘴巴稍微大一点
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = s*0.05;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, s*0.15, s*0.18, 0.3, Math.PI-0.3);
+                ctx.stroke();
+                break;
+
+            case 'yoshi': // 耀西表情（恐龙风格）
+                // 大眼睛（恐龙眼）
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(-s*0.25, -s*0.2, s*0.2, s*0.25, 0, 0, Math.PI*2);
+                ctx.ellipse(s*0.35, -s*0.2, s*0.2, s*0.25, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 黑色大眼睛珠
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.arc(-s*0.2, -s*0.18, s*0.1, 0, Math.PI*2);
+                ctx.arc(s*0.4, -s*0.18, s*0.1, 0, Math.PI*2);
+                ctx.fill();
+                // 白色高光
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-s*0.17, -s*0.22, s*0.04, 0, Math.PI*2);
+                ctx.arc(s*0.43, -s*0.22, s*0.04, 0, Math.PI*2);
+                ctx.fill();
+                // 恐龙鼻子
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.08, s*0.2, s*0.12, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 两个小鼻孔
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.arc(-s*0.08, s*0.08, s*0.04, 0, Math.PI*2);
+                ctx.arc(s*0.08, s*0.08, s*0.04, 0, Math.PI*2);
+                ctx.fill();
+                // 开心嘴巴
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = s*0.05;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, s*0.2, s*0.18, 0.2, Math.PI-0.2);
+                ctx.stroke();
+                break;
+
             default:
                 // 默认可爱表情
                 ctx.fillStyle = 'white';
@@ -1301,111 +1444,348 @@ class Player {
                 ctx.arc(s*0.7, s*0.2, s*0.06, 0, Math.PI*2);
                 ctx.stroke();
                 break;
+
+            case 'mustache': // 马里奥/路易吉的大胡子
+                // 标志性的大胡子
+                ctx.fillStyle = '#4a3020';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.18, s*0.35, s*0.12, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 胡子中间的缝
+                ctx.fillStyle = '#FFAA88';
+                ctx.beginPath();
+                ctx.ellipse(0, s*0.12, s*0.06, s*0.08, 0, 0, Math.PI*2);
+                ctx.fill();
+                break;
         }
     }
 
     drawXuanBlueThunder(s) {
-        // 炫蓝雷霆 - 炫卡斗士风格的机甲战士
-        // 身体（蓝色机甲风格）
-        const bodyGradient = ctx.createRadialGradient(-s*0.2, -s*0.3, 0, 0, 0, s*1.2);
-        bodyGradient.addColorStop(0, '#00CED1');
-        bodyGradient.addColorStop(0.5, '#008B8B');
-        bodyGradient.addColorStop(1, '#006666');
+        // 炫蓝雷霆王 - 超真实机甲战士（炫卡斗士风格）
 
-        ctx.fillStyle = bodyGradient;
-        ctx.beginPath();
-        ctx.ellipse(0, s*0.1, s*0.9, s*1.1, 0, 0, Math.PI*2);
-        ctx.fill();
+        // ===== 头部 - 机甲头盔 =====
+        // 头盔主体 - 金属质感渐变
+        const helmetGrad = ctx.createLinearGradient(-s*0.5, -s*1.2, s*0.5, -s*0.3);
+        helmetGrad.addColorStop(0, '#4A90E2');
+        helmetGrad.addColorStop(0.3, '#2E5C8A');
+        helmetGrad.addColorStop(0.7, '#1E3A5F');
+        helmetGrad.addColorStop(1, '#0F1F33');
 
-        // 机甲装甲线条
-        ctx.strokeStyle = '#00FFFF';
-        ctx.lineWidth = s*0.03;
+        ctx.fillStyle = helmetGrad;
         ctx.beginPath();
         ctx.moveTo(-s*0.5, -s*0.5);
+        ctx.lineTo(-s*0.6, -s*1.1);
+        ctx.quadraticCurveTo(0, -s*1.4, s*0.6, -s*1.1);
         ctx.lineTo(s*0.5, -s*0.5);
-        ctx.moveTo(-s*0.4, -s*0.2);
-        ctx.lineTo(s*0.4, -s*0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        // 头盔边缘装甲
+        ctx.strokeStyle = '#00D4FF';
+        ctx.lineWidth = s*0.04;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.55, -s*0.55);
+        ctx.lineTo(-s*0.65, -s*1.15);
+        ctx.quadraticCurveTo(0, -s*1.5, s*0.65, -s*1.15);
+        ctx.lineTo(s*0.55, -s*0.55);
         ctx.stroke();
 
-        // 胸口能量核心（发光）
+        // 中央金色装饰条
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-s*0.08, -s*1.35, s*0.16, s*0.7);
+        // 装饰条上的能量宝石
         ctx.fillStyle = '#00FFFF';
         ctx.shadowColor = '#00FFFF';
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20;
         ctx.beginPath();
-        ctx.arc(0, s*0.1, s*0.15, 0, Math.PI*2);
+        ctx.arc(0, -s*1.0, s*0.08, 0, Math.PI*2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 眼睛（红色发光）
+        // 天线
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = s*0.03;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.4, -s*1.2);
+        ctx.lineTo(-s*0.5, -s*1.6);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(s*0.4, -s*1.2);
+        ctx.lineTo(s*0.5, -s*1.6);
+        ctx.stroke();
+        // 天线顶端红灯
         ctx.fillStyle = '#FF0000';
         ctx.shadowColor = '#FF0000';
         ctx.shadowBlur = 10;
         ctx.beginPath();
-        ctx.ellipse(-s*0.3, -s*0.15, s*0.15, s*0.1, 0, 0, Math.PI*2);
-        ctx.ellipse(s*0.3, -s*0.15, s*0.15, s*0.1, 0, 0, Math.PI*2);
+        ctx.arc(-s*0.5, -s*1.6, s*0.06, 0, Math.PI*2);
+        ctx.arc(s*0.5, -s*1.6, s*0.06, 0, Math.PI*2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 雷电标志（额头）
-        ctx.fillStyle = '#FFD700';
+        // 发光眼罩/护目镜
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(-s*0.45, -s*0.85, s*0.9, s*0.25);
+        // 红色发光眼睛
+        ctx.fillStyle = '#FF0000';
+        ctx.shadowColor = '#FF0000';
+        ctx.shadowBlur = 15;
         ctx.beginPath();
-        ctx.moveTo(-s*0.1, -s*0.5);
-        ctx.lineTo(s*0.05, -s*0.4);
-        ctx.lineTo(-s*0.05, -s*0.4);
-        ctx.lineTo(s*0.1, -s*0.3);
-        ctx.lineTo(s*0, -s*0.3);
-        ctx.lineTo(s*0.05, -s*0.25);
-        ctx.lineTo(-s*0.1, -s*0.35);
-        ctx.lineTo(s*0, -s*0.35);
+        ctx.ellipse(-s*0.25, -s*0.72, s*0.12, s*0.08, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.25, -s*0.72, s*0.12, s*0.08, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 眼睛高光
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(-s*0.22, -s*0.74, s*0.03, 0, Math.PI*2);
+        ctx.arc(s*0.28, -s*0.74, s*0.03, 0, Math.PI*2);
+        ctx.fill();
+
+        // 嘴部呼吸格栅
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(-s*0.25, -s*0.5, s*0.5, s*0.15);
+        ctx.fillStyle = '#34495E';
+        for(let i = -0.15; i <= 0.15; i += 0.1) {
+            ctx.fillRect(i*s, -s*0.48, s*0.02, s*0.11);
+        }
+
+        // ===== 身体 - 分层装甲 =====
+        // 胸部主装甲
+        const chestGrad = ctx.createLinearGradient(0, -s*0.4, 0, s*0.6);
+        chestGrad.addColorStop(0, '#4A90E2');
+        chestGrad.addColorStop(0.5, '#2E5C8A');
+        chestGrad.addColorStop(1, '#1E3A5F');
+
+        ctx.fillStyle = chestGrad;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.6, -s*0.4);
+        ctx.lineTo(-s*0.7, s*0.5);
+        ctx.lineTo(0, s*0.7);
+        ctx.lineTo(s*0.7, s*0.5);
+        ctx.lineTo(s*0.6, -s*0.4);
         ctx.closePath();
         ctx.fill();
 
-        // 机甲肩甲
-        ctx.fillStyle = '#4682B4';
+        // 胸部装甲边缘发光
+        ctx.strokeStyle = '#00D4FF';
+        ctx.lineWidth = s*0.03;
+        ctx.stroke();
+
+        // 中央六边形能量核心
+        ctx.fillStyle = '#0a0a0a';
         ctx.beginPath();
-        ctx.moveTo(-s*0.8, -s*0.2);
-        ctx.lineTo(-s*1.1, s*0.2);
-        ctx.lineTo(-s*0.7, s*0.3);
-        ctx.lineTo(-s*0.6, -s*0.1);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(s*0.8, -s*0.2);
-        ctx.lineTo(s*1.1, s*0.2);
-        ctx.lineTo(s*0.7, s*0.3);
-        ctx.lineTo(s*0.6, -s*0.1);
+        ctx.moveTo(0, -s*0.15);
+        ctx.lineTo(s*0.15, -s*0.05);
+        ctx.lineTo(s*0.15, s*0.15);
+        ctx.lineTo(0, s*0.25);
+        ctx.lineTo(-s*0.15, s*0.15);
+        ctx.lineTo(-s*0.15, -s*0.05);
+        ctx.closePath();
         ctx.fill();
 
-        // 小手（机甲风格）
-        ctx.fillStyle = '#008B8B';
+        // 核心内部发光
+        const corePulse = 0.7 + Math.sin(frameCount * 0.2) * 0.3;
+        ctx.fillStyle = `rgba(0, 255, 255, ${corePulse})`;
+        ctx.shadowColor = '#00FFFF';
+        ctx.shadowBlur = 25;
         ctx.beginPath();
-        ctx.arc(-s*0.9, s*0.3, s*0.18, 0, Math.PI*2);
-        ctx.arc(s*0.9, s*0.3, s*0.18, 0, Math.PI*2);
+        ctx.arc(0, s*0.05, s*0.1 * corePulse, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 胸部细节线条
+        ctx.strokeStyle = '#5DADE2';
+        ctx.lineWidth = s*0.02;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.4, -s*0.2);
+        ctx.lineTo(-s*0.4, s*0.3);
+        ctx.moveTo(s*0.4, -s*0.2);
+        ctx.lineTo(s*0.4, s*0.3);
+        ctx.stroke();
+
+        // ===== 肩部装甲 =====
+        // 左肩甲
+        const shoulderGrad = ctx.createLinearGradient(-s*1.0, -s*0.3, -s*0.6, s*0.3);
+        shoulderGrad.addColorStop(0, '#5DADE2');
+        shoulderGrad.addColorStop(0.5, '#2E5C8A');
+        shoulderGrad.addColorStop(1, '#1E3A5F');
+
+        ctx.fillStyle = shoulderGrad;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.6, -s*0.35);
+        ctx.lineTo(-s*1.1, -s*0.2);
+        ctx.lineTo(-s*1.2, s*0.3);
+        ctx.lineTo(-s*0.65, s*0.4);
+        ctx.closePath();
         ctx.fill();
 
-        // 脚（机甲推进器）
-        ctx.fillStyle = '#4682B4';
-        ctx.fillRect(-s*0.45, s*1.1, s*0.3, s*0.3);
-        ctx.fillRect(s*0.15, s*1.1, s*0.3, s*0.3);
+        // 右肩甲
+        const shoulderGradR = ctx.createLinearGradient(s*0.6, -s*0.3, s*1.0, s*0.3);
+        shoulderGradR.addColorStop(0, '#1E3A5F');
+        shoulderGradR.addColorStop(0.5, '#2E5C8A');
+        shoulderGradR.addColorStop(1, '#5DADE2');
+
+        ctx.fillStyle = shoulderGradR;
+        ctx.beginPath();
+        ctx.moveTo(s*0.6, -s*0.35);
+        ctx.lineTo(s*1.1, -s*0.2);
+        ctx.lineTo(s*1.2, s*0.3);
+        ctx.lineTo(s*0.65, s*0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        // 肩甲发光边缘
+        ctx.strokeStyle = '#00D4FF';
+        ctx.lineWidth = s*0.03;
+        ctx.beginPath();
+        ctx.moveTo(-s*0.6, -s*0.35);
+        ctx.lineTo(-s*1.1, -s*0.2);
+        ctx.lineTo(-s*1.2, s*0.3);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(s*0.6, -s*0.35);
+        ctx.lineTo(s*1.1, -s*0.2);
+        ctx.lineTo(s*1.2, s*0.3);
+        ctx.stroke();
+
+        // 肩甲上的细节
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(-s*0.9, s*0.1, s*0.06, 0, Math.PI*2);
+        ctx.arc(s*0.9, s*0.1, s*0.06, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 机械手臂 =====
+        // 左臂上段
+        ctx.fillStyle = '#2E5C8A';
+        ctx.fillRect(-s*1.15, s*0.25, s*0.35, s*0.5);
+        // 左关节
+        ctx.fillStyle = '#5D6D7E';
+        ctx.beginPath();
+        ctx.arc(-s*0.97, s*0.75, s*0.15, 0, Math.PI*2);
+        ctx.fill();
+        // 左臂下段
+        ctx.fillStyle = '#34495E';
+        ctx.fillRect(-s*1.1, s*0.75, s*0.3, s*0.4);
+        // 左手拳
+        ctx.fillStyle = '#1E3A5F';
+        ctx.beginPath();
+        ctx.arc(-s*0.95, s*1.15, s*0.18, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右臂上段
+        ctx.fillStyle = '#2E5C8A';
+        ctx.fillRect(s*0.8, s*0.25, s*0.35, s*0.5);
+        // 右关节
+        ctx.fillStyle = '#5D6D7E';
+        ctx.beginPath();
+        ctx.arc(s*0.97, s*0.75, s*0.15, 0, Math.PI*2);
+        ctx.fill();
+        // 右臂下段
+        ctx.fillStyle = '#34495E';
+        ctx.fillRect(s*0.8, s*0.75, s*0.3, s*0.4);
+        // 右手拳
+        ctx.fillStyle = '#1E3A5F';
+        ctx.beginPath();
+        ctx.arc(s*0.95, s*1.15, s*0.18, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 腰部和腿部 =====
+        // 腰部装甲
+        ctx.fillStyle = '#2C3E50';
+        ctx.fillRect(-s*0.4, s*0.65, s*0.8, s*0.25);
+        // 腰部发光条
+        ctx.fillStyle = '#00FFFF';
+        ctx.fillRect(-s*0.3, s*0.72, s*0.6, s*0.08);
+
+        // 左大腿
+        ctx.fillStyle = '#2E5C8A';
+        ctx.fillRect(-s*0.5, s*0.9, s*0.35, s*0.45);
+        // 左膝盖关节
+        ctx.fillStyle = '#5D6D7E';
+        ctx.beginPath();
+        ctx.arc(-s*0.32, s*1.35, s*0.12, 0, Math.PI*2);
+        ctx.fill();
+        // 左小腿
+        ctx.fillStyle = '#34495E';
+        ctx.fillRect(-s*0.45, s*1.35, s*0.28, s*0.4);
+        // 左脚
+        ctx.fillStyle = '#1E3A5F';
+        ctx.beginPath();
+        ctx.moveTo(-s*0.55, s*1.75);
+        ctx.lineTo(-s*0.15, s*1.75);
+        ctx.lineTo(-s*0.1, s*1.9);
+        ctx.lineTo(-s*0.6, s*1.9);
+        ctx.closePath();
+        ctx.fill();
+
+        // 右大腿
+        ctx.fillStyle = '#2E5C8A';
+        ctx.fillRect(s*0.15, s*0.9, s*0.35, s*0.45);
+        // 右膝盖关节
+        ctx.fillStyle = '#5D6D7E';
+        ctx.beginPath();
+        ctx.arc(s*0.32, s*1.35, s*0.12, 0, Math.PI*2);
+        ctx.fill();
+        // 右小腿
+        ctx.fillStyle = '#34495E';
+        ctx.fillRect(s*0.17, s*1.35, s*0.28, s*0.4);
+        // 右脚
+        ctx.fillStyle = '#1E3A5F';
+        ctx.beginPath();
+        ctx.moveTo(s*0.15, s*1.75);
+        ctx.lineTo(s*0.55, s*1.75);
+        ctx.lineTo(s*0.6, s*1.9);
+        ctx.lineTo(s*0.1, s*1.9);
+        ctx.closePath();
+        ctx.fill();
+
+        // ===== 背部推进器 =====
+        // 推进器主体
+        ctx.fillStyle = '#34495E';
+        ctx.beginPath();
+        ctx.ellipse(-s*0.25, s*1.2, s*0.15, s*0.25, -0.3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(s*0.25, s*1.2, s*0.15, s*0.25, 0.3, 0, Math.PI*2);
+        ctx.fill();
 
         // 推进器火焰效果
-        ctx.fillStyle = `rgba(0, 255, 255, ${0.5 + Math.sin(frameCount * 0.5) * 0.3})`;
+        const flameIntensity = 0.6 + Math.sin(frameCount * 0.3) * 0.4;
+        ctx.fillStyle = `rgba(0, 200, 255, ${flameIntensity})`;
+        ctx.shadowColor = '#00D4FF';
+        ctx.shadowBlur = 20;
+
+        // 左火焰
         ctx.beginPath();
-        ctx.moveTo(-s*0.3, s*1.4);
-        ctx.lineTo(-s*0.45, s*1.7);
+        ctx.moveTo(-s*0.35, s*1.4);
+        ctx.lineTo(-s*0.5, s*1.8 + Math.sin(frameCount*0.5)*s*0.1);
         ctx.lineTo(-s*0.15, s*1.4);
         ctx.fill();
+
+        // 右火焰
         ctx.beginPath();
-        ctx.moveTo(s*0.3, s*1.4);
-        ctx.lineTo(s*0.15, s*1.7);
-        ctx.lineTo(s*0.45, s*1.4);
+        ctx.moveTo(s*0.15, s*1.4);
+        ctx.lineTo(s*0.5, s*1.8 + Math.sin(frameCount*0.5 + 1)*s*0.1);
+        ctx.lineTo(s*0.35, s*1.4);
         ctx.fill();
 
-        // 变身剩余时间指示器（移到角色下方）
+        ctx.shadowBlur = 0;
+
+        // ===== 能量光环 =====
+        ctx.strokeStyle = `rgba(0, 212, 255, ${0.3 + Math.sin(frameCount * 0.1) * 0.2})`;
+        ctx.lineWidth = s*0.02;
+        ctx.beginPath();
+        ctx.arc(0, s*0.2, s*1.3, 0, Math.PI*2);
+        ctx.stroke();
+
+        // 变身剩余时间指示器
         if (this.transformTimer > 0) {
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
-            ctx.font = `bold ${s*0.4}px Arial`;
+            ctx.fillStyle = 'rgba(0, 212, 255, 0.9)';
+            ctx.font = `bold ${s*0.35}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*1.5);
+            ctx.fillText(Math.ceil(this.transformTimer / 60), 0, s*2.1);
         }
     }
 
@@ -1533,6 +1913,65 @@ class Player {
                 ctx.beginPath();
                 ctx.arc(-s*0.35, -s*1.15, s*0.06, 0, Math.PI*2);
                 ctx.arc(s*0.35, -s*1.15, s*0.06, 0, Math.PI*2);
+                ctx.fill();
+                break;
+
+            case 'mario_cap': // 马里奥红色帽子
+                // 帽子主体
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.ellipse(0, -s*1.0, s*0.7, s*0.4, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 帽檐
+                ctx.fillStyle = '#CC0000';
+                ctx.beginPath();
+                ctx.ellipse(0, -s*0.75, s*0.75, s*0.25, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 帽子上的M标志
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(0, -s*1.0, s*0.2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#FF0000';
+                ctx.font = `bold ${s*0.3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('M', 0, -s*0.9);
+                break;
+
+            case 'luigi_cap': // 路易吉绿色帽子
+                ctx.fillStyle = '#00AA00';
+                ctx.beginPath();
+                ctx.ellipse(0, -s*1.0, s*0.7, s*0.4, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#008800';
+                ctx.beginPath();
+                ctx.ellipse(0, -s*0.75, s*0.75, s*0.25, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(0, -s*1.0, s*0.2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#00AA00';
+                ctx.font = `bold ${s*0.3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('L', 0, -s*0.9);
+                break;
+
+            case 'yoshi_saddle': // 耀西鞍座
+                // 红色鞍座
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.ellipse(0, -s*0.5, s*0.5, s*0.3, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 鞍座边缘
+                ctx.strokeStyle = '#CC0000';
+                ctx.lineWidth = s*0.05;
+                ctx.stroke();
+                // 鞍座上的钉
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(-s*0.3, -s*0.5, s*0.06, 0, Math.PI*2);
+                ctx.arc(s*0.3, -s*0.5, s*0.06, 0, Math.PI*2);
                 ctx.fill();
                 break;
 
@@ -1946,7 +2385,7 @@ class Bullet {
     update() {
         if (this.dead) return;
 
-        // 追踪导弹：寻找最近敌人并调整方向
+        // 追踪导弹：寻找最近敌人并渐进式调整方向
         if (this.homing && this.type === 'missile') {
             let nearest = null, nearestDist = Infinity;
             for (let e of enemies) {
@@ -1956,9 +2395,21 @@ class Bullet {
                 }
             }
             if (nearest) {
-                const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
-                this.vx = Math.cos(angle) * 8;
-                this.vy = Math.sin(angle) * 8;
+                const targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+                const currentAngle = Math.atan2(this.vy, this.vx);
+                // 计算角度差并平滑转向（最大转向角度限制为0.15弧度/帧）
+                let angleDiff = targetAngle - currentAngle;
+                // 规范化角度差到[-PI, PI]
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                // 限制最大转向角度
+                const maxTurn = 0.15;
+                const turnAngle = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+                const newAngle = currentAngle + turnAngle;
+                // 保持速度恒定
+                const speed = 9;
+                this.vx = Math.cos(newAngle) * speed;
+                this.vy = Math.sin(newAngle) * speed;
             }
         }
 
@@ -1970,7 +2421,13 @@ class Bullet {
             if (this.bounce > 3) { this.dead = true; return; }
         }
 
-        this.x += this.vx;
+        // 追踪导弹：更新位置（追踪弹有vy速度）
+        if (this.type === 'missile') {
+            this.x += this.vx;
+            this.y += this.vy;
+        } else {
+            this.x += this.vx;
+        }
         this.life--;
 
         // 超出寿命或超出边界
@@ -2128,14 +2585,72 @@ class Bullet {
                 break;
 
             case 'missile':
-                // 追踪导弹 - 银色锥形
-                ctx.shadowColor = '#888';
-                ctx.shadowBlur = 10;
-                ctx.fillStyle = '#C0C0C0';
-                ctx.beginPath(); ctx.moveTo(this.vx > 0 ? this.r : -this.r, 0); ctx.lineTo(this.vx > 0 ? -this.r : this.r, -5); ctx.lineTo(this.vx > 0 ? -this.r : this.r, 5); ctx.closePath(); ctx.fill();
-                // 尾焰
-                ctx.fillStyle = '#FF4500';
-                ctx.beginPath(); ctx.arc(this.vx > 0 ? -this.r : this.r, 0, 5, 0, Math.PI * 2); ctx.fill();
+                // 追踪导弹 - 根据实际速度方向旋转
+                const angle = Math.atan2(this.vy, this.vx);
+                ctx.save();
+                ctx.rotate(angle);
+
+                // 导弹主体 - 流线型
+                const missileGrad = ctx.createLinearGradient(-this.r*2, 0, this.r, 0);
+                missileGrad.addColorStop(0, '#FF4500');
+                missileGrad.addColorStop(0.3, '#C0C0C0');
+                missileGrad.addColorStop(1, '#E8E8E8');
+
+                ctx.fillStyle = missileGrad;
+                ctx.shadowColor = '#FF6347';
+                ctx.shadowBlur = 15;
+
+                // 导弹头部（尖头）
+                ctx.beginPath();
+                ctx.moveTo(this.r * 2.5, 0);
+                ctx.lineTo(-this.r, -this.r * 0.8);
+                ctx.lineTo(-this.r * 0.5, 0);
+                ctx.lineTo(-this.r, this.r * 0.8);
+                ctx.closePath();
+                ctx.fill();
+
+                // 弹体中部
+                ctx.fillStyle = '#A0A0A0';
+                ctx.fillRect(-this.r * 1.5, -this.r * 0.5, this.r, this.r);
+
+                // 尾翼
+                ctx.fillStyle = '#696969';
+                ctx.beginPath();
+                ctx.moveTo(-this.r * 1.5, -this.r * 0.3);
+                ctx.lineTo(-this.r * 2.2, -this.r * 0.9);
+                ctx.lineTo(-this.r * 1.8, -this.r * 0.3);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-this.r * 1.5, this.r * 0.3);
+                ctx.lineTo(-this.r * 2.2, this.r * 0.9);
+                ctx.lineTo(-this.r * 1.8, this.r * 0.3);
+                ctx.fill();
+
+                // 尾焰效果
+                const flameSize = 8 + Math.random() * 6;
+                ctx.fillStyle = `rgba(255, 100, 0, ${0.8 + Math.random() * 0.2})`;
+                ctx.shadowColor = '#FF4500';
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.moveTo(-this.r * 2.2, 0);
+                ctx.lineTo(-this.r * 2.2 - flameSize, -this.r * 0.4);
+                ctx.lineTo(-this.r * 2.5 - flameSize * 0.7, 0);
+                ctx.lineTo(-this.r * 2.2 - flameSize, this.r * 0.4);
+                ctx.closePath();
+                ctx.fill();
+
+                // 内焰
+                ctx.fillStyle = `rgba(255, 200, 0, ${0.9 + Math.random() * 0.1})`;
+                ctx.beginPath();
+                ctx.moveTo(-this.r * 2.2, 0);
+                ctx.lineTo(-this.r * 2.5, -this.r * 0.25);
+                ctx.lineTo(-this.r * 2.7, 0);
+                ctx.lineTo(-this.r * 2.5, this.r * 0.25);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+                ctx.shadowBlur = 0;
                 break;
 
             case 'poison':
