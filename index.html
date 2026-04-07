@@ -440,8 +440,8 @@ const CHARACTERS = [
         color: '#FF0000',
         secondaryColor: '#FF4444',
         hat: 'mario_cap',
-        face: 'mario',
-        accessory: 'mustache'
+        face: 'human',
+        accessory: 'none'
     },
     {
         id: 'luigi',
@@ -450,8 +450,8 @@ const CHARACTERS = [
         color: '#00AA00',
         secondaryColor: '#32CD32',
         hat: 'luigi_cap',
-        face: 'luigi',
-        accessory: 'mustache'
+        face: 'human',
+        accessory: 'none'
     },
     {
         id: 'yoshi',
@@ -958,6 +958,12 @@ class Player {
     }
 
     drawEggCharacter(s, char) {
+        // 马里奥和路易吉使用人形绘制
+        if (char.id === 'mario' || char.id === 'luigi') {
+            this.drawHumanCharacter(s, char);
+            return;
+        }
+
         // 蛋仔派对风格的圆润蛋形身体
         const bodyGradient = ctx.createRadialGradient(-s*0.3, -s*0.4, 0, 0, 0, s*1.3);
         bodyGradient.addColorStop(0, char.secondaryColor || char.color);
@@ -996,6 +1002,158 @@ class Player {
         ctx.beginPath();
         ctx.ellipse(-s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
         ctx.ellipse(s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    drawHumanCharacter(s, char) {
+        // 人形角色绘制（马里奥/路易吉风格）
+        const isMario = char.id === 'mario';
+        const shirtColor = isMario ? '#FF0000' : '#00AA00';  // 红色/绿色上衣
+        const overallsColor = '#0066CC';  // 蓝色背带裤
+        const buttonColor = '#FFD700';    // 金色纽扣
+
+        // ===== 头部 =====
+        // 脸（肤色）
+        ctx.fillStyle = '#FFCC99';
+        ctx.beginPath();
+        ctx.ellipse(0, -s*0.45, s*0.5, s*0.45, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 耳朵
+        ctx.fillStyle = '#FFCC99';
+        ctx.beginPath();
+        ctx.ellipse(-s*0.48, -s*0.4, s*0.12, s*0.15, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(s*0.48, -s*0.4, s*0.12, s*0.15, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 眼睛
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.ellipse(-s*0.18, -s*0.55, s*0.12, s*0.15, 0, 0, Math.PI*2);
+        ctx.ellipse(s*0.18, -s*0.55, s*0.12, s*0.15, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 蓝色眼珠
+        ctx.fillStyle = '#4169E1';
+        ctx.beginPath();
+        ctx.arc(-s*0.15, -s*0.52, s*0.07, 0, Math.PI*2);
+        ctx.arc(s*0.21, -s*0.52, s*0.07, 0, Math.PI*2);
+        ctx.fill();
+
+        // 黑色瞳孔
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.arc(-s*0.15, -s*0.52, s*0.035, 0, Math.PI*2);
+        ctx.arc(s*0.21, -s*0.52, s*0.035, 0, Math.PI*2);
+        ctx.fill();
+
+        // 眼睛高光
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(-s*0.13, -s*0.55, s*0.02, 0, Math.PI*2);
+        ctx.arc(s*0.23, -s*0.55, s*0.02, 0, Math.PI*2);
+        ctx.fill();
+
+        // 大鼻子（马里奥标志性）
+        ctx.fillStyle = '#FFB088';
+        ctx.beginPath();
+        ctx.ellipse(0, -s*0.35, s*0.18, s*0.14, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 大胡子
+        ctx.fillStyle = '#4a3020';
+        ctx.beginPath();
+        ctx.ellipse(0, -s*0.18, s*0.35, s*0.12, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 胡子中间的缝
+        ctx.fillStyle = '#FFCC99';
+        ctx.beginPath();
+        ctx.ellipse(0, -s*0.22, s*0.06, s*0.08, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 帽子
+        this.drawHat(s, char.hat, char.color);
+
+        // ===== 身体 =====
+        // 红色/绿色上衣（躯干）
+        ctx.fillStyle = shirtColor;
+        ctx.beginPath();
+        ctx.ellipse(0, s*0.15, s*0.55, s*0.5, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 蓝色背带裤（下半部分）
+        ctx.fillStyle = overallsColor;
+        ctx.beginPath();
+        ctx.ellipse(0, s*0.6, s*0.5, s*0.45, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 背带裤的肚子部分（圆形）
+        ctx.fillStyle = overallsColor;
+        ctx.beginPath();
+        ctx.arc(0, s*0.35, s*0.42, 0, Math.PI*2);
+        ctx.fill();
+
+        // 背带（两条带子）
+        ctx.fillStyle = overallsColor;
+        // 左背带
+        ctx.fillRect(-s*0.35, s*0.05, s*0.15, s*0.35);
+        // 右背带
+        ctx.fillRect(s*0.2, s*0.05, s*0.15, s*0.35);
+
+        // 背带纽扣（金色）
+        ctx.fillStyle = buttonColor;
+        ctx.beginPath();
+        ctx.arc(-s*0.28, s*0.12, s*0.06, 0, Math.PI*2);
+        ctx.arc(s*0.28, s*0.12, s*0.06, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 手臂 =====
+        // 左臂（红色/绿色袖子）
+        ctx.fillStyle = shirtColor;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.7, s*0.1, s*0.2, s*0.35, -0.3, 0, Math.PI*2);
+        ctx.fill();
+        // 左手（白色手套）
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(-s*0.9, s*0.25, s*0.18, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右臂
+        ctx.fillStyle = shirtColor;
+        ctx.beginPath();
+        ctx.ellipse(s*0.7, s*0.1, s*0.2, s*0.35, 0.3, 0, Math.PI*2);
+        ctx.fill();
+        // 右手（白色手套）
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(s*0.9, s*0.25, s*0.18, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 腿部 =====
+        // 左腿（蓝色裤子）
+        ctx.fillStyle = overallsColor;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.28, s*1.05, s*0.22, s*0.4, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 棕色鞋子
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(-s*0.28, s*1.45, s*0.28, s*0.15, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右腿
+        ctx.fillStyle = overallsColor;
+        ctx.beginPath();
+        ctx.ellipse(s*0.28, s*1.05, s*0.22, s*0.4, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 棕色鞋子
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(s*0.28, s*1.45, s*0.28, s*0.15, 0, 0, Math.PI*2);
         ctx.fill();
     }
 
@@ -1224,80 +1382,6 @@ class Player {
                 ctx.stroke();
                 break;
 
-            case 'mario': // 马里奥表情
-                // 大眼睛
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(-s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
-                ctx.ellipse(s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
-                ctx.fill();
-                // 蓝色眼珠
-                ctx.fillStyle = '#4169E1';
-                ctx.beginPath();
-                ctx.arc(-s*0.25, -s*0.12, s*0.12, 0, Math.PI*2);
-                ctx.arc(s*0.32, -s*0.12, s*0.12, 0, Math.PI*2);
-                ctx.fill();
-                // 黑色瞳孔
-                ctx.fillStyle = '#1a1a1a';
-                ctx.beginPath();
-                ctx.arc(-s*0.25, -s*0.12, s*0.06, 0, Math.PI*2);
-                ctx.arc(s*0.32, -s*0.12, s*0.06, 0, Math.PI*2);
-                ctx.fill();
-                // 高光
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(-s*0.22, -s*0.18, s*0.04, 0, Math.PI*2);
-                ctx.arc(s*0.35, -s*0.18, s*0.04, 0, Math.PI*2);
-                ctx.fill();
-                // 大鼻子
-                ctx.fillStyle = '#FFAA88';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.05, s*0.18, s*0.14, 0, 0, Math.PI*2);
-                ctx.fill();
-                // 微笑
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = s*0.05;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(0, s*0.12, s*0.15, 0.3, Math.PI-0.3);
-                ctx.stroke();
-                break;
-
-            case 'luigi': // 路易吉表情（类似马里奥但稍微不同）
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(-s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
-                ctx.ellipse(s*0.3, -s*0.15, s*0.22, s*0.28, 0, 0, Math.PI*2);
-                ctx.fill();
-                ctx.fillStyle = '#4169E1';
-                ctx.beginPath();
-                ctx.arc(-s*0.28, -s*0.12, s*0.12, 0, Math.PI*2);
-                ctx.arc(s*0.3, -s*0.12, s*0.12, 0, Math.PI*2);
-                ctx.fill();
-                ctx.fillStyle = '#1a1a1a';
-                ctx.beginPath();
-                ctx.arc(-s*0.28, -s*0.12, s*0.06, 0, Math.PI*2);
-                ctx.arc(s*0.3, -s*0.12, s*0.06, 0, Math.PI*2);
-                ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(-s*0.25, -s*0.18, s*0.04, 0, Math.PI*2);
-                ctx.arc(s*0.33, -s*0.18, s*0.04, 0, Math.PI*2);
-                ctx.fill();
-                // 鼻子
-                ctx.fillStyle = '#FFAA88';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.05, s*0.16, s*0.12, 0, 0, Math.PI*2);
-                ctx.fill();
-                // 路易吉的嘴巴稍微大一点
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = s*0.05;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(0, s*0.15, s*0.18, 0.3, Math.PI-0.3);
-                ctx.stroke();
-                break;
-
             case 'yoshi': // 耀西表情（恐龙风格）
                 // 大眼睛（恐龙眼）
                 ctx.fillStyle = 'white';
@@ -1443,19 +1527,6 @@ class Player {
                 ctx.beginPath();
                 ctx.arc(s*0.7, s*0.2, s*0.06, 0, Math.PI*2);
                 ctx.stroke();
-                break;
-
-            case 'mustache': // 马里奥/路易吉的大胡子
-                // 标志性的大胡子
-                ctx.fillStyle = '#4a3020';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.18, s*0.35, s*0.12, 0, 0, Math.PI*2);
-                ctx.fill();
-                // 胡子中间的缝
-                ctx.fillStyle = '#FFAA88';
-                ctx.beginPath();
-                ctx.ellipse(0, s*0.12, s*0.06, s*0.08, 0, 0, Math.PI*2);
-                ctx.fill();
                 break;
         }
     }
