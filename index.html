@@ -2835,15 +2835,15 @@ class Bullet {
                 ctx.fill();
 
                 // 尾焰效果
-                const flameSize = 8 + Math.random() * 6;
+                const missileFlameSize = 8 + Math.random() * 6;
                 ctx.fillStyle = `rgba(255, 100, 0, ${0.8 + Math.random() * 0.2})`;
                 ctx.shadowColor = '#FF4500';
                 ctx.shadowBlur = 20;
                 ctx.beginPath();
                 ctx.moveTo(-this.r * 2.2, 0);
-                ctx.lineTo(-this.r * 2.2 - flameSize, -this.r * 0.4);
-                ctx.lineTo(-this.r * 2.5 - flameSize * 0.7, 0);
-                ctx.lineTo(-this.r * 2.2 - flameSize, this.r * 0.4);
+                ctx.lineTo(-this.r * 2.2 - missileFlameSize, -this.r * 0.4);
+                ctx.lineTo(-this.r * 2.5 - missileFlameSize * 0.7, 0);
+                ctx.lineTo(-this.r * 2.2 - missileFlameSize, this.r * 0.4);
                 ctx.closePath();
                 ctx.fill();
 
