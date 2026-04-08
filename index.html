@@ -2263,28 +2263,40 @@ class Coin {
 class QBlock {
     constructor(x,y) {
         this.x=x; this.y=y; this.done=false;
-        this.q=this.makeQByDifficulty();
-        const rand = Math.random();
-        // 道具生成概率：火力增强道具（15%）+ 其他道具（85%）
-        // 火力增强道具概率低于计算题（30%出道具，70%计算题）
-        if (rand < 0.04) this.itemType = 'ELECTRIC';      // 4% 电击弹
-        else if (rand < 0.08) this.itemType = 'SPREAD';    // 4% 散弹枪
-        else if (rand < 0.12) this.itemType = 'FLAME';     // 4% 火龙炮
-        else if (rand < 0.16) this.itemType = 'ICE';       // 4% 冰冻弹
-        else if (rand < 0.20) this.itemType = 'BUBBLE';   // 4% 水泡泡
-        else if (rand < 0.24) this.itemType = 'LASER';     // 4% 激光炮
-        else if (rand < 0.28) this.itemType = 'MISSILE';  // 4% 追踪导弹
-        else if (rand < 0.32) this.itemType = 'POISON';   // 4% 毒液弹
-        else if (rand < 0.36) this.itemType = 'RAINBOW';  // 4% 彩虹弹
-        else if (rand < 0.40) this.itemType = 'RAPID';    // 4% 连弩
-        else if (rand < 0.44) this.itemType = 'BOUNCY';   // 4% 弹跳球
-        else if (rand < 0.48) this.itemType = 'EXPLOSIVE';// 4% 爆裂弹
-        else if (rand < 0.52) this.itemType = 'FLAME_STREAM';// 4% 火焰喷射
-        else if (rand < 0.66) this.itemType = 'STAR';      // 14% 星星
-        else if (rand < 0.65) this.itemType = 'SUNFLOWER'; // 15% 向日葵
-        else if (rand < 0.85) this.itemType = 'COIN';     // 20% 金币
-        else this.itemType = 'DIAMOND';                     // 15% 钻石
+        this.type = 'question'; // 'question' | 'item'
+        this.q = null;
+        this.itemType = null;
         this.itemSpawned = false;
+
+        const rand = Math.random();
+        // 互斥逻辑：要么计算题，要么道具
+        // 50% 计算题, 50% 道具（其中35%火力道具，15%普通道具）
+        if (rand < 0.50) {
+            // 计算题
+            this.type = 'question';
+            this.q = this.makeQByDifficulty();
+        } else if (rand < 0.53) this.setItemType('ELECTRIC');    // 3% 电击弹
+        else if (rand < 0.56) this.setItemType('SPREAD');       // 3% 散弹枪
+        else if (rand < 0.59) this.setItemType('FLAME');        // 3% 火龙炮
+        else if (rand < 0.62) this.setItemType('ICE');          // 3% 冰冻弹
+        else if (rand < 0.65) this.setItemType('BUBBLE');       // 3% 水泡泡
+        else if (rand < 0.68) this.setItemType('LASER');        // 3% 激光炮
+        else if (rand < 0.71) this.setItemType('MISSILE');      // 3% 追踪导弹
+        else if (rand < 0.74) this.setItemType('POISON');       // 3% 毒液弹
+        else if (rand < 0.77) this.setItemType('RAINBOW');      // 3% 彩虹弹
+        else if (rand < 0.80) this.setItemType('RAPID');        // 3% 连弩
+        else if (rand < 0.83) this.setItemType('BOUNCY');       // 3% 弹跳球
+        else if (rand < 0.86) this.setItemType('EXPLOSIVE');    // 3% 爆裂弹
+        else if (rand < 0.89) this.setItemType('FLAME_STREAM'); // 3% 火焰喷射
+        else if (rand < 0.94) this.setItemType('STAR');         // 5% 星星
+        else if (rand < 0.97) this.setItemType('SUNFLOWER');    // 3% 向日葵
+        else if (rand < 0.985) this.setItemType('COIN');        // 1.5% 金币
+        else this.setItemType('DIAMOND');                       // 1.5% 钻石
+    }
+
+    setItemType(type) {
+        this.type = 'item';
+        this.itemType = type;
     }
 
     makeQByDifficulty() {
@@ -2388,14 +2400,40 @@ class QBlock {
         if (this.done && requireAllBoxes) {
             ctx.fillStyle = '#4ade80';
             ctx.fillRect(-22, -22, 44, 44);
-        } else {
-            ctx.fillStyle = this.done ? '#9CA3AF' : '#F59E0B';
+            ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-22, -22, 44, 44);
+            ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('✓', 0, 5);
+        } else if (this.done) {
+            // 普通完成状态
+            ctx.fillStyle = '#9CA3AF';
             ctx.fillRect(-20, -20, 40, 40);
+            ctx.strokeStyle = '#6B7280'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+            ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('✓', 0, 5);
+        } else if (this.type === 'item') {
+            // 道具类型：显示礼物盒
+            const item = ITEM_TYPES[this.itemType] || ITEM_TYPES.COIN;
+            // 礼物盒背景
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(-20, -20, 40, 40);
+            // 礼物盒丝带
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(-4, -20, 8, 40);
+            ctx.fillRect(-20, -4, 40, 8);
+            // 边框
+            ctx.strokeStyle = '#C92A2A'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+            // 道具图标
+            ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(item.emoji, 0, 6);
+        } else {
+            // 计算题类型：显示问号
+            ctx.fillStyle = '#F59E0B';
+            ctx.fillRect(-20, -20, 40, 40);
+            ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+            ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('?', 0, 5);
         }
 
-        ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
-        ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
-        ctx.fillText(this.done ? '✓' : '?', 0, 5);
         ctx.restore();
     }
 }
@@ -3200,6 +3238,164 @@ class BirdEnemy {
     }
 }
 
+// ==================== 坑洞类（地面陷阱）====================
+class Pit {
+    constructor(x, width) {
+        this.x = x; // 坑洞左侧位置
+        this.y = 450; // 地面高度
+        this.width = width || 60; // 坑洞宽度
+        this.dead = false;
+    }
+
+    update() {
+        // 检测玩家是否掉入坑洞
+        if (!player) return;
+
+        // 玩家在坑洞上方且正在下落
+        const playerInPitX = player.x > this.x && player.x < this.x + this.width;
+        const playerFalling = player.y > 440 && player.vy > 0;
+
+        if (playerInPitX && playerFalling) {
+            // 玩家掉入坑洞，关卡重置
+            this.triggerReset();
+        }
+    }
+
+    triggerReset() {
+        // 显示掉落动画
+        player.vy = 5;
+        player.y += 10;
+
+        if (player.y > 600) {
+            // 玩家掉出屏幕，重置关卡
+            showHint('💀 掉落坑洞！关卡重置...');
+            setTimeout(() => {
+                resetLevel();
+            }, 1000);
+        }
+    }
+
+    draw() {
+        // 绘制坑洞（黑色深渊）
+        ctx.save();
+
+        // 坑洞上方的警告标记（只在接近时显示）
+        if (player && Math.abs(player.x - (this.x + this.width/2)) < 150) {
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚠️', this.x + this.width/2 - cam, this.y - 40);
+        }
+
+        // 坑洞本体（黑色）
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(this.x - cam, this.y, this.width, 100);
+
+        // 坑洞边缘（深灰色）
+        ctx.fillStyle = '#333';
+        ctx.fillRect(this.x - cam, this.y, 5, 10);
+        ctx.fillRect(this.x + this.width - 5 - cam, this.y, 5, 10);
+
+        ctx.restore();
+    }
+}
+
+// ==================== 滚动石头类（横向障碍物）====================
+class RollingStone {
+    constructor(x, y, direction) {
+        this.x = x;
+        this.y = y || 420; // 默认在地面滚动
+        this.r = 20; // 石头半径
+        this.dir = direction || 1; // 1向右，-1向左
+        this.speed = 2 + Math.random() * 2; // 随机速度 2-4
+        this.rotation = 0; // 旋转角度
+        this.dead = false;
+        this.hitFlash = 0;
+    }
+
+    update() {
+        if (this.dead) return;
+
+        // 滚动移动
+        this.x += this.speed * this.dir;
+        this.rotation += this.speed * 0.1 * this.dir;
+
+        // 循环滚动（从一边滚到另一边）
+        const levelEnd = flag ? flag.x + 200 : 2000;
+        if (this.x > levelEnd) {
+            this.x = 50;
+        } else if (this.x < 0) {
+            this.x = levelEnd - 50;
+        }
+
+        // 检测与玩家碰撞
+        if (player && !player.invincible) {
+            const dist = Math.hypot(this.x - player.x, this.y - player.y);
+            if (dist < this.r + player.r) {
+                // 石头撞到玩家
+                if (player.hit()) {
+                    // 玩家死亡
+                }
+                // 石头反弹
+                this.dir *= -1;
+                this.hitFlash = 10;
+            }
+        }
+
+        // 检测与子弹碰撞（可被击碎）
+        for (let b of bullets) {
+            if (!b.dead && Math.hypot(this.x - b.x, this.y - b.y) < this.r + b.r) {
+                b.dead = true;
+                this.hitFlash = 5;
+                // 石头被击中后略微减速
+                this.speed = Math.max(1, this.speed * 0.9);
+            }
+        }
+
+        if (this.hitFlash > 0) this.hitFlash--;
+    }
+
+    draw() {
+        if (this.dead) return;
+        ctx.save();
+        ctx.translate(this.x - cam, this.y);
+        ctx.rotate(this.rotation);
+
+        if (this.hitFlash > 0) ctx.globalAlpha = 0.5;
+
+        // 石头主体（灰色圆形）
+        const stoneGrad = ctx.createRadialGradient(-5, -5, 0, 0, 0, this.r);
+        stoneGrad.addColorStop(0, '#A0A0A0');
+        stoneGrad.addColorStop(1, '#606060');
+        ctx.fillStyle = stoneGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 石头纹理（裂缝）
+        ctx.strokeStyle = '#404040';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-8, -5);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(5, -8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-5, 8);
+        ctx.lineTo(2, 3);
+        ctx.stroke();
+
+        // 高光
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath();
+        ctx.arc(-6, -6, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
 // ==================== 特殊变身箱子类 ====================
 class SpecialTransformBox {
     constructor(x, y) {
@@ -3251,9 +3447,11 @@ class SpecialTransformBox {
 
 // ==================== 横版闯关初始化（加长版）====================
 let enemies = [];
+let pits = [];
+let stones = [];
 function initPlatformer() {
     player = new Player(); cam = 0;
-    blocks = []; coins = []; questions = []; items = []; enemies = [];
+    blocks = []; coins = []; questions = []; items = []; enemies = []; pits = []; stones = [];
 
     // 新关卡长度：15000 / 20000 / 25000
     if (level === 1) {
@@ -3288,6 +3486,14 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
         }
 
+        // 坑洞陷阱（第一关2个）
+        pits.push(new Pit(2500, 80));
+        pits.push(new Pit(8000, 100));
+
+        // 滚动石头（第一关2个）
+        stones.push(new RollingStone(1500, 430, 1));
+        stones.push(new RollingStone(6000, 430, -1));
+
         flag = {x: levelLength - 300, y: 350};
 
     } else if (level === 2) {
@@ -3318,6 +3524,18 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
         }
 
+        // 坑洞陷阱（第二关4个）
+        pits.push(new Pit(2000, 90));
+        pits.push(new Pit(5500, 80));
+        pits.push(new Pit(11000, 100));
+        pits.push(new Pit(16000, 90));
+
+        // 滚动石头（第二关4个）
+        stones.push(new RollingStone(1200, 430, 1));
+        stones.push(new RollingStone(4500, 430, -1));
+        stones.push(new RollingStone(9000, 430, 1));
+        stones.push(new RollingStone(14000, 430, -1));
+
         flag = {x: levelLength - 300, y: 300};
 
     } else {
@@ -3347,6 +3565,22 @@ function initPlatformer() {
         for (let i = 800; i < levelLength - 1000; i += 400) {
             enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
         }
+
+        // 坑洞陷阱（第三关6个）
+        pits.push(new Pit(1800, 100));
+        pits.push(new Pit(4500, 90));
+        pits.push(new Pit(9000, 110));
+        pits.push(new Pit(13000, 80));
+        pits.push(new Pit(17000, 100));
+        pits.push(new Pit(21000, 90));
+
+        // 滚动石头（第三关6个，更快）
+        stones.push(new RollingStone(1000, 430, 1));
+        stones.push(new RollingStone(3500, 430, -1));
+        stones.push(new RollingStone(7000, 430, 1));
+        stones.push(new RollingStone(11500, 430, -1));
+        stones.push(new RollingStone(15000, 430, 1));
+        stones.push(new RollingStone(19500, 430, -1));
 
         flag = {x: levelLength - 300, y: 280};
     }
@@ -3441,8 +3675,9 @@ function updatePlatformer(timestamp) {
 
     for (let q of questions) {
         if (!q.done && Math.hypot(player.x-q.x, player.y-q.y) < 40) {
-            // 30%概率直接出道具，70%概率出算术题
-            if (Math.random() < 0.3 && !q.itemSpawned) {
+            // 互斥逻辑：根据方块类型决定是计算题还是道具
+            if (q.type === 'item') {
+                // 道具类型：直接掉落道具
                 const item = new Item(q.x, q.y, q.itemType);
                 item.vy = -8;
                 item.vx = (Math.random() - 0.5) * 2;
@@ -3473,10 +3708,17 @@ function updatePlatformer(timestamp) {
                          q.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                          q.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
             } else {
+                // 计算题类型：显示算术题
                 showQ(q);
             }
         }
     }
+
+    // 更新坑洞
+    for (let p of pits) p.update();
+
+    // 更新滚动石头
+    for (let s of stones) s.update();
 
     // 特殊变身箱子碰撞检测
     if (specialTransformBox && !specialTransformBox.done) {
@@ -3537,9 +3779,16 @@ function drawPlatformer() {
     ctx.fillStyle = '#8B5CF6';
     for (let b of blocks.slice(1)) ctx.fillRect(b[0]-cam,b[1],b[2],b[3]);
 
+    // 绘制坑洞（在敌人之前，这样敌人会掉到洞里）
+    for (let p of pits) p.draw();
+
     for (let item of items) item.draw();
     for (let c of coins) c.draw();
     for (let e of enemies) e.draw();
+
+    // 绘制滚动石头
+    for (let s of stones) s.draw();
+
     for (let b of bullets) b.draw();
     for (let q of questions) q.draw();
 
@@ -4779,6 +5028,83 @@ function loop(timestamp) {
     drawPlatformer();
 
     platformerAnimId = requestAnimationFrame(loop);
+}
+
+// 关卡重置（用于坑洞掉落等陷阱）
+function resetLevel() {
+    // 重置玩家位置到关卡起点
+    player.x = 100;
+    player.y = 300;
+    player.vx = 0;
+    player.vy = 0;
+    player.isTransformed = false;
+    player.transformTimer = 0;
+    player.invincible = 120; // 给予短暂无敌时间
+    player.isBig = false;
+    player.j = 0;
+    player.g = false;
+
+    // 重置相机
+    cam = 0;
+
+    // 重置游戏对象（保留当前关卡进度）
+    bullets = [];
+    items = [];
+
+    // 重新初始化敌人、坑洞、石头
+    enemies = [];
+    pits = [];
+    stones = [];
+
+    const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
+
+    // 根据关卡重新生成敌人、坑洞、石头
+    if (level === 1) {
+        for (let i = 800; i < levelLength - 1000; i += 400) {
+            enemies.push(new Enemy(i, 420, 100 + Math.random() * 100));
+        }
+        for (let i = 1200; i < levelLength - 1000; i += 800) {
+            enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
+        }
+        pits.push(new Pit(2500, 80));
+        pits.push(new Pit(8000, 100));
+        stones.push(new RollingStone(1500, 430, 1));
+        stones.push(new RollingStone(6000, 430, -1));
+    } else if (level === 2) {
+        for (let i = 700; i < levelLength - 1000; i += 350) {
+            enemies.push(new Enemy(i, 420, 80 + Math.random() * 120));
+        }
+        for (let i = 1000; i < levelLength - 1000; i += 600) {
+            enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
+        }
+        pits.push(new Pit(2000, 90));
+        pits.push(new Pit(5500, 80));
+        pits.push(new Pit(11000, 100));
+        pits.push(new Pit(16000, 90));
+        stones.push(new RollingStone(1200, 430, 1));
+        stones.push(new RollingStone(4500, 430, -1));
+        stones.push(new RollingStone(9000, 430, 1));
+        stones.push(new RollingStone(14000, 430, -1));
+    } else {
+        for (let i = 600; i < levelLength - 1000; i += 300) {
+            enemies.push(new Enemy(i, 420, 60 + Math.random() * 150));
+        }
+        for (let i = 800; i < levelLength - 1000; i += 400) {
+            enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
+        }
+        pits.push(new Pit(1800, 100));
+        pits.push(new Pit(4500, 90));
+        pits.push(new Pit(9000, 110));
+        pits.push(new Pit(13000, 80));
+        pits.push(new Pit(17000, 100));
+        pits.push(new Pit(21000, 90));
+        stones.push(new RollingStone(1000, 430, 1));
+        stones.push(new RollingStone(3500, 430, -1));
+        stones.push(new RollingStone(7000, 430, 1));
+        stones.push(new RollingStone(11500, 430, -1));
+        stones.push(new RollingStone(15000, 430, 1));
+        stones.push(new RollingStone(19500, 430, -1));
+    }
 }
 
 function restart() {
