@@ -3263,6 +3263,7 @@ class Pit {
         this.y = 450; // 地面高度
         this.width = width || 60; // 坑洞宽度
         this.dead = false;
+        this.resetTriggered = false; // 防止重复触发重置
     }
 
     update() {
@@ -3284,10 +3285,12 @@ class Pit {
         player.vy = 5;
         player.y += 10;
 
-        if (player.y > 600) {
-            // 玩家掉出屏幕，重置关卡
+        if (player.y > 600 && !this.resetTriggered) {
+            // 玩家掉出屏幕，重置关卡（只触发一次）
+            this.resetTriggered = true;
             showHint('💀 掉落坑洞！关卡重置...');
             setTimeout(() => {
+                this.resetTriggered = false;
                 resetLevel();
             }, 1000);
         }
