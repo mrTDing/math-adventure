@@ -602,7 +602,7 @@ let specialTransformBox = null; // 特殊变身箱子
 
 // 道具类型
 // 玩家火力状态（永久生效，被击败或换武器时重置）
-let playerFireMode = 'normal'; // normal, electric, spread, flame, ice, bubble, laser, missile, poison, rainbow
+let playerFireMode = 'normal'; // normal, electric, spread, flame, ice, bubble, laser, missile, poison, rainbow, rapid, bouncy, explosive, flameStream
 
 const ITEM_TYPES = {
     SUNFLOWER: { emoji: '🌻', score: 50, effect: 'score' },
@@ -618,7 +618,11 @@ const ITEM_TYPES = {
     LASER: { emoji: '⚡', effect: 'fireMode', mode: 'laser', name: '激光炮' },
     MISSILE: { emoji: '🚀', effect: 'fireMode', mode: 'missile', name: '追踪导弹' },
     POISON: { emoji: '☠️', effect: 'fireMode', mode: 'poison', name: '毒液弹' },
-    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' }
+    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' },
+    RAPID: { emoji: '🏹', effect: 'fireMode', mode: 'rapid', name: '连弩' },
+    BOUNCY: { emoji: '🔮', effect: 'fireMode', mode: 'bouncy', name: '弹跳球' },
+    EXPLOSIVE: { emoji: '💣', effect: 'fireMode', mode: 'explosive', name: '爆裂弹' },
+    FLAME_STREAM: { emoji: '🔥', effect: 'fireMode', mode: 'flameStream', name: '火焰喷射' }
 };
 
 // ==================== 消消乐变量 ====================
@@ -2272,7 +2276,11 @@ class QBlock {
         else if (rand < 0.28) this.itemType = 'MISSILE';  // 4% 追踪导弹
         else if (rand < 0.32) this.itemType = 'POISON';   // 4% 毒液弹
         else if (rand < 0.36) this.itemType = 'RAINBOW';  // 4% 彩虹弹
-        else if (rand < 0.50) this.itemType = 'STAR';      // 14% 星星
+        else if (rand < 0.40) this.itemType = 'RAPID';    // 4% 连弩
+        else if (rand < 0.44) this.itemType = 'BOUNCY';   // 4% 弹跳球
+        else if (rand < 0.48) this.itemType = 'EXPLOSIVE';// 4% 爆裂弹
+        else if (rand < 0.52) this.itemType = 'FLAME_STREAM';// 4% 火焰喷射
+        else if (rand < 0.66) this.itemType = 'STAR';      // 14% 星星
         else if (rand < 0.65) this.itemType = 'SUNFLOWER'; // 15% 向日葵
         else if (rand < 0.85) this.itemType = 'COIN';     // 20% 金币
         else this.itemType = 'DIAMOND';                     // 15% 钻石
@@ -2448,6 +2456,14 @@ class Bullet {
                 this.r = 7; this.vx = direction * 8; this.damage = 1; this.poisonTick = 30; break;
             case 'rainbow':
                 this.r = 11; this.vx = direction * 9; this.damage = 1; this.splitCount = 0; break;
+            case 'rapid':
+                this.r = 5; this.vx = direction * 14; this.damage = 1; this.pierce = 3; break;
+            case 'bouncy':
+                this.r = 10; this.vx = direction * 10; this.damage = 2; this.bounces = 5; this.gravity = 0.2; break;
+            case 'explosive':
+                this.r = 12; this.vx = direction * 7; this.damage = 2; this.explodeRadius = 80; break;
+            case 'flameStream':
+                this.r = 20; this.vx = direction * 4; this.damage = 1; this.life = 25; this.spread = true; break;
             default:
                 this.damage = 1;
         }
@@ -2468,19 +2484,26 @@ class Bullet {
             if (nearest) {
                 const targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
                 const currentAngle = Math.atan2(this.vy, this.vx);
-                // 计算角度差并平滑转向（最大转向角度限制为0.15弧度/帧）
+                // 计算角度差并平滑转向
                 let angleDiff = targetAngle - currentAngle;
                 // 规范化角度差到[-PI, PI]
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                // 限制最大转向角度
-                const maxTurn = 0.15;
+                // 动态调整转向速度：距离越近转向越快，避免绕圈
+                const baseTurn = 0.15;
+                const distanceFactor = Math.max(0.5, Math.min(2.0, nearestDist / 100));
+                const maxTurn = baseTurn * distanceFactor;
                 const turnAngle = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
                 const newAngle = currentAngle + turnAngle;
                 // 保持速度恒定
                 const speed = 9;
                 this.vx = Math.cos(newAngle) * speed;
                 this.vy = Math.sin(newAngle) * speed;
+                // 近距离加速命中，防止绕圈
+                if (nearestDist < 40) {
+                    this.vx = Math.cos(targetAngle) * (speed + 3);
+                    this.vy = Math.sin(targetAngle) * (speed + 3);
+                }
             }
         }
 
@@ -2490,6 +2513,39 @@ class Bullet {
             this.vy += 0.3;
             if (this.y > 450) { this.y = 450; this.vy *= -0.8; this.bounce++; }
             if (this.bounce > 3) { this.dead = true; return; }
+        }
+
+        // 弹跳球：物理弹跳效果
+        if (this.type === 'bouncy') {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += this.gravity || 0.2;
+            // 地面和天花板碰撞
+            if (this.y > 450) {
+                this.y = 450;
+                this.vy *= -0.85;
+                this.bounces--;
+            }
+            if (this.y < 50) {
+                this.y = 50;
+                this.vy *= -0.85;
+                this.bounces--;
+            }
+            // 墙壁碰撞
+            for (let p of platforms) {
+                if (this.x > p[0] && this.x < p[0] + p[2] &&
+                    this.y + this.r > p[1] && this.y - this.r < p[1] + p[3]) {
+                    // 水平碰撞
+                    if (Math.abs(this.x - p[0]) < Math.abs(this.x - (p[0] + p[2]))) {
+                        this.x = p[0] - this.r;
+                    } else {
+                        this.x = p[0] + p[2] + this.r;
+                    }
+                    this.vx *= -0.8;
+                    this.bounces--;
+                }
+            }
+            if (this.bounces <= 0) { this.dead = true; return; }
         }
 
         // 追踪导弹：更新位置（追踪弹有vy速度）
@@ -2533,19 +2589,44 @@ class Bullet {
                     if (e.hit()) { killed = true; }
                 }
 
-                // 毒液弹：持续伤害
+                // 毒液弹：持续伤害（可叠加层数）
                 if (this.type === 'poison' && !killed) {
                     if (!e.poisonTimer) e.poisonTimer = 0;
-                    e.poisonTimer += 60;
+                    e.poisonTimer += 90; // 增加持续时间到3秒
+                    e.poisonStacks = Math.min((e.poisonStacks || 0) + 1, 5); // 最多5层
+                }
+
+                // 爆裂弹：范围爆炸
+                if (this.type === 'explosive') {
+                    enemies.forEach(nearby => {
+                        if (!nearby.dead && Math.hypot(this.x - nearby.x, this.y - nearby.y) < this.explodeRadius) {
+                            nearby.hitFlash = 10;
+                            for (let i = 0; i < 2; i++) {
+                                if (nearby.hit()) { score += 100; }
+                            }
+                        }
+                    });
+                    // 爆炸特效
+                    for (let i = 0; i < 8; i++) {
+                        particles.push(new Particle(this.x, this.y, '#FF4500'));
+                    }
                 }
 
                 if (killed) { score += 100; updateUI(); AudioSys.playCoin(); }
 
-                // 电击弹、激光、水泡泡可穿透
-                if (this.type === 'electric' || this.type === 'laser') {
+                // 电击弹、激光、水泡泡、火焰喷射可穿透
+                if (this.type === 'electric' || this.type === 'laser' || this.type === 'flameStream') {
                     // 穿透，不死亡
                 } else if (this.type === 'bubble') {
                     if (this.bounce > 2) this.dead = true;
+                } else if (this.type === 'rapid') {
+                    // 连弩：可穿透指定数量敌人
+                    this.pierce--;
+                    if (this.pierce <= 0) this.dead = true;
+                } else if (this.type === 'bouncy') {
+                    // 弹跳球：碰到敌人不死亡，只是反弹
+                    this.vx *= -0.8;
+                    this.vy = -Math.abs(this.vy) - 2;
                 } else {
                     this.dead = true;
                 }
@@ -2750,6 +2831,91 @@ class Bullet {
                 ctx.beginPath(); ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
                 break;
 
+            case 'rapid':
+                // 连弩 - 银色箭矢
+                ctx.shadowColor = '#C0C0C0';
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = '#C0C0C0';
+                const arrowAngle = Math.atan2(this.vy, this.vx);
+                ctx.rotate(arrowAngle);
+                // 箭杆
+                ctx.fillRect(-this.r, -2, this.r * 4, 4);
+                // 箭头
+                ctx.beginPath();
+                ctx.moveTo(this.r * 2, 0);
+                ctx.lineTo(this.r, -5);
+                ctx.lineTo(this.r, 5);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'bouncy':
+                // 弹跳球 - 紫色魔法球带光晕
+                ctx.shadowColor = '#9370DB';
+                ctx.shadowBlur = 15;
+                const bounceHue = (frameCount * 10) % 60 + 260; // 紫色范围
+                ctx.fillStyle = `hsl(${bounceHue},80%,60%)`;
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
+                // 内部波纹效果
+                ctx.strokeStyle = `hsl(${bounceHue},100%,80%)`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * (0.5 + 0.3 * Math.sin(frameCount * 0.3)), 0, Math.PI * 2);
+                ctx.stroke();
+                break;
+
+            case 'explosive':
+                // 爆裂弹 - 红色炸弹形状
+                ctx.shadowColor = '#FF0000';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#8B0000';
+                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FF4500';
+                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2); ctx.fill();
+                // 闪烁的引线效果
+                if (frameCount % 10 < 5) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath(); ctx.arc(0, 0, this.r * 0.3, 0, Math.PI * 2); ctx.fill();
+                }
+                break;
+
+            case 'flameStream':
+                // 火焰喷射 - 魂斗罗式火焰效果
+                const flameLife = this.life / 25;
+                const flameSize = this.r * (0.8 + Math.random() * 0.4);
+                // 外焰 - 红色
+                ctx.shadowColor = '#FF4500';
+                ctx.shadowBlur = 25;
+                ctx.fillStyle = `rgba(255, 69, 0, ${flameLife})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, flameSize, 0, Math.PI * 2);
+                ctx.fill();
+                // 中焰 - 橙色
+                ctx.fillStyle = `rgba(255, 140, 0, ${flameLife})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, flameSize * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                // 内焰 - 黄色
+                ctx.fillStyle = `rgba(255, 215, 0, ${flameLife})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, flameSize * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                // 核心 - 白色
+                ctx.fillStyle = `rgba(255, 255, 200, ${flameLife})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, flameSize * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                // 火焰喷射粒子
+                if (Math.random() < 0.3) {
+                    ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${flameLife * 0.5})`;
+                    const px = (Math.random() - 0.5) * flameSize * 2;
+                    const py = (Math.random() - 0.5) * flameSize * 2;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2 + Math.random() * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                break;
+
             default:
                 // 普通炮弹
                 ctx.shadowColor = '#FFD700';
@@ -2798,15 +2964,31 @@ class Enemy {
             return;
         }
 
-        // 毒液持续伤害
+        // 毒液持续伤害（支持多层叠加）
         if (this.poisonTimer > 0) {
             this.poisonTimer--;
+            // 每30帧造成伤害，层数越多伤害越高
             if (this.poisonTimer % 30 === 0 && this.hp > 1) {
-                this.hp--;
+                const stacks = this.poisonStacks || 1;
+                const damage = Math.min(stacks, 3); // 最多3点伤害/次
+                for (let i = 0; i < damage; i++) {
+                    this.hp--;
+                    if (this.hp <= 0) break;
+                }
                 this.hitFlash = 5;
-                score += 20;
+                score += 20 * damage;
                 updateUI();
-                if (this.hp <= 0) { this.dead = true; score += 100; updateUI(); AudioSys.playCoin(); return; }
+                if (this.hp <= 0) {
+                    this.dead = true;
+                    score += 100;
+                    updateUI();
+                    AudioSys.playCoin();
+                    return;
+                }
+            }
+            // 毒液效果结束时重置层数
+            if (this.poisonTimer <= 0) {
+                this.poisonStacks = 0;
             }
         }
 
@@ -2840,21 +3022,58 @@ class Enemy {
         ctx.fillRect(-12, 15, 8, 8);
         ctx.fillRect(4, 15, 8, 8);
 
-        // 冻结特效
+        // 冻结特效（增强版）
         if (this.freezeTime > 0) {
-            ctx.strokeStyle = '#87CEEB';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-17, -17, 34, 34);
-            ctx.fillStyle = 'rgba(135,206,235,0.3)';
-            ctx.fillRect(-17, -17, 34, 34);
+            // 冰晶边框
+            ctx.strokeStyle = '#E0F7FA';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([5, 3]);
+            ctx.strokeRect(-18, -18, 36, 36);
+            ctx.setLineDash([]);
+            // 冰层覆盖
+            ctx.fillStyle = 'rgba(135,206,235,0.5)';
+            ctx.fillRect(-18, -18, 36, 36);
+            // 冰晶装饰
+            ctx.strokeStyle = '#B3E5FC';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-15, -15); ctx.lineTo(-5, -5);
+            ctx.moveTo(15, -15); ctx.lineTo(5, -5);
+            ctx.moveTo(-15, 15); ctx.lineTo(-5, 5);
+            ctx.moveTo(15, 15); ctx.lineTo(5, 5);
+            ctx.stroke();
+            // 寒气粒子
+            if (frameCount % 10 < 5) {
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.beginPath();
+                ctx.arc(-10 + Math.random() * 20, -25, 2 + Math.random() * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
-        // 毒液特效
-        if (this.poisonTimer > 0 && this.poisonTimer % 10 < 5) {
-            ctx.fillStyle = '#32CD32';
-            ctx.beginPath(); ctx.arc(-10, -20, 4, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(8, -10, 3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(0, 15, 3, 0, Math.PI*2); ctx.fill();
+        // 毒液特效（根据层数显示不同效果）
+        if (this.poisonTimer > 0) {
+            const stacks = this.poisonStacks || 1;
+            const alpha = 0.4 + stacks * 0.15;
+            const greenIntensity = Math.min(255, 50 + stacks * 40);
+            ctx.fillStyle = `rgba(50, ${greenIntensity}, 50, ${alpha})`;
+            // 层数越多气泡越多
+            const bubbleCount = Math.min(stacks + 2, 6);
+            const positions = [[-10, -20], [8, -10], [0, 15], [-8, 5], [12, 8], [0, -5]];
+            for (let i = 0; i < bubbleCount; i++) {
+                if (this.poisonTimer % 15 === i % 15) {
+                    const pos = positions[i % positions.length];
+                    const size = 3 + Math.random() * 3;
+                    ctx.beginPath(); ctx.arc(pos[0], pos[1], size, 0, Math.PI*2); ctx.fill();
+                }
+            }
+            // 显示层数数字
+            if (stacks > 1) {
+                ctx.fillStyle = '#32CD32';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`x${stacks}`, 0, -25);
+            }
         }
 
         ctx.globalAlpha = 1;
@@ -3246,6 +3465,10 @@ function updatePlatformer(timestamp) {
                          q.itemType === 'MISSILE' ? '🚀 追踪导弹!' :
                          q.itemType === 'POISON' ? '☠️ 毒液弹!' :
                          q.itemType === 'RAINBOW' ? '🌈 彩虹弹!' :
+                         q.itemType === 'RAPID' ? '🏹 连弩!' :
+                         q.itemType === 'BOUNCY' ? '🔮 弹跳球!' :
+                         q.itemType === 'EXPLOSIVE' ? '💣 爆裂弹!' :
+                         q.itemType === 'FLAME_STREAM' ? '🔥 火焰喷射!' :
                          q.itemType === 'STAR' ? '⭐ 星星!' :
                          q.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                          q.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
@@ -3363,7 +3586,8 @@ function drawPlatformer() {
         const modeNames = {
             electric: '⚡电击弹', spread: '🔥散弹枪', flame: '🐉火龙炮',
             ice: '❄️冰冻弹', bubble: '🫧水泡泡', laser: '⚡激光炮',
-            missile: '🚀追踪导弹', poison: '☠️毒液弹', rainbow: '🌈彩虹弹'
+            missile: '🚀追踪导弹', poison: '☠️毒液弹', rainbow: '🌈彩虹弹',
+            rapid: '🏹连弩', bouncy: '🔮弹跳球', explosive: '💣爆裂弹', flameStream: '🔥火焰喷射'
         };
         ctx.fillText(modeNames[playerFireMode] || playerFireMode, 15, 120);
         ctx.textAlign = 'start';
@@ -4799,8 +5023,64 @@ function fireBullet() {
             break;
 
         case 'rainbow':
-            // 彩虹弹 - 多彩效果
-            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'rainbow'));
+            // 彩虹弹 - 多彩效果，发射5发扇形弹幕
+            for (let i = -2; i <= 2; i++) {
+                const b = new Bullet(player.x + direction * 30, player.y, direction, 'rainbow');
+                const angle = i * 0.15 * direction;
+                const baseAngle = direction === 1 ? 0 : Math.PI;
+                const finalAngle = baseAngle + angle;
+                b.vx = Math.cos(finalAngle) * 9;
+                b.vy = Math.sin(finalAngle) * 9;
+                bullets.push(b);
+            }
+            break;
+
+        case 'rapid':
+            // 连弩 - 三连发快速射击，间隔50ms
+            const rapidFire = (count) => {
+                if (count <= 0) return;
+                bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'rapid'));
+                if (count > 1) {
+                    setTimeout(() => rapidFire(count - 1), 50);
+                }
+            };
+            rapidFire(3);
+            // 连弩冷却时间更短
+            lastFireTime -= 150;
+            break;
+
+        case 'bouncy':
+            // 弹跳球 - 弹跳穿透
+            const bouncy = new Bullet(player.x + direction * 30, player.y - 10, direction, 'bouncy');
+            bouncy.vy = -4; // 初始向上抛出
+            bullets.push(bouncy);
+            break;
+
+        case 'explosive':
+            // 爆裂弹 - 范围爆炸伤害
+            bullets.push(new Bullet(player.x + direction * 35, player.y, direction, 'explosive'));
+            break;
+
+        case 'flameStream':
+            // 火焰喷射 - 短距离扇形火焰（参考魂斗罗）
+            const flameCount = 5;
+            for (let i = 0; i < flameCount; i++) {
+                const b = new Bullet(
+                    player.x + direction * (30 + i * 15),
+                    player.y + (Math.random() - 0.5) * 10,
+                    direction,
+                    'flameStream'
+                );
+                // 扇形扩散
+                const spreadAngle = (Math.random() - 0.5) * 0.5 * direction;
+                const baseAngle = direction === 1 ? 0 : Math.PI;
+                const finalAngle = baseAngle + spreadAngle;
+                b.vx = Math.cos(finalAngle) * (4 + Math.random() * 2);
+                b.vy = Math.sin(finalAngle) * (2 + Math.random() * 2);
+                bullets.push(b);
+            }
+            // 火焰可以连续喷射，冷却更短
+            lastFireTime -= 100;
             break;
 
         default:
