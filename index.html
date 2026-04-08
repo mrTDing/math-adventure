@@ -615,10 +615,14 @@ const ITEM_TYPES = {
     FLAME: { emoji: '🐉', effect: 'fireMode', mode: 'flame', name: '火龙炮' },
     ICE: { emoji: '❄️', effect: 'fireMode', mode: 'ice', name: '冰冻弹' },
     BUBBLE: { emoji: '🫧', effect: 'fireMode', mode: 'bubble', name: '水泡泡' },
-    LASER: { emoji: '⚡', effect: 'fireMode', mode: 'laser', name: '激光炮' },
+    LASER: { emoji: '🔴', effect: 'fireMode', mode: 'laser', name: '激光炮' },
     MISSILE: { emoji: '🚀', effect: 'fireMode', mode: 'missile', name: '追踪导弹' },
     POISON: { emoji: '☠️', effect: 'fireMode', mode: 'poison', name: '毒液弹' },
-    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' }
+    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' },
+    RAPID: { emoji: '🏹', effect: 'fireMode', mode: 'rapid', name: '连弩' },
+    BOUNCY: { emoji: '🔮', effect: 'fireMode', mode: 'bouncy', name: '弹跳球' },
+    EXPLOSIVE: { emoji: '💣', effect: 'fireMode', mode: 'explosive', name: '爆裂弹' },
+    FLAME_STREAM: { emoji: '🔥', effect: 'fireMode', mode: 'flameStream', name: '火焰喷射' }
 };
 
 // ==================== 消消乐变量 ====================
@@ -2469,7 +2473,8 @@ class Item {
         if (this.collected) return;
         ctx.save(); ctx.translate(this.x-cam, this.y);
         ctx.font = '24px Arial'; ctx.textAlign = 'center';
-        ctx.fillText(ITEM_TYPES[this.type].emoji, 0, 5);
+        const itemType = ITEM_TYPES[this.type] || ITEM_TYPES.COIN;
+        ctx.fillText(itemType.emoji, 0, 5);
         ctx.restore();
     }
 }
@@ -3766,7 +3771,8 @@ function answer(block, sel) {
 }
 
 function collectItem(type) {
-    const item = ITEM_TYPES[type];
+    const item = ITEM_TYPES[type] || ITEM_TYPES.COIN;
+    if (!item) return;
     if (item.effect === 'score') {
         score += item.score; AudioSys.playCoin();
     } else if (item.effect === 'fireMode') {
