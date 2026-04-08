@@ -602,7 +602,7 @@ let specialTransformBox = null; // 特殊变身箱子
 
 // 道具类型
 // 玩家火力状态（永久生效，被击败或换武器时重置）
-let playerFireMode = 'normal'; // normal, electric, spread, flame, ice, bubble, laser, missile, poison, rainbow, rapid, bouncy, explosive, flameStream
+let playerFireMode = 'normal'; // normal, electric, spread, flame, ice, bubble, laser, missile, poison, rainbow
 
 const ITEM_TYPES = {
     SUNFLOWER: { emoji: '🌻', score: 50, effect: 'score' },
@@ -618,11 +618,7 @@ const ITEM_TYPES = {
     LASER: { emoji: '⚡', effect: 'fireMode', mode: 'laser', name: '激光炮' },
     MISSILE: { emoji: '🚀', effect: 'fireMode', mode: 'missile', name: '追踪导弹' },
     POISON: { emoji: '☠️', effect: 'fireMode', mode: 'poison', name: '毒液弹' },
-    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' },
-    RAPID: { emoji: '🏹', effect: 'fireMode', mode: 'rapid', name: '连弩' },
-    BOUNCY: { emoji: '🔮', effect: 'fireMode', mode: 'bouncy', name: '弹跳球' },
-    EXPLOSIVE: { emoji: '💣', effect: 'fireMode', mode: 'explosive', name: '爆裂弹' },
-    FLAME_STREAM: { emoji: '🔥', effect: 'fireMode', mode: 'flameStream', name: '火焰喷射' }
+    RAINBOW: { emoji: '🌈', effect: 'fireMode', mode: 'rainbow', name: '彩虹弹' }
 };
 
 // ==================== 消消乐变量 ====================
@@ -2288,7 +2284,7 @@ class QBlock {
 
         const rand = Math.random();
         // 互斥逻辑：要么计算题，要么道具
-        // 50% 计算题, 50% 道具（其中35%火力道具，15%普通道具）
+        // 50% 计算题, 50% 道具
         if (rand < 0.50) {
             // 计算题
             this.type = 'question';
@@ -2302,13 +2298,9 @@ class QBlock {
         else if (rand < 0.71) this.setItemType('MISSILE');      // 3% 追踪导弹
         else if (rand < 0.74) this.setItemType('POISON');       // 3% 毒液弹
         else if (rand < 0.77) this.setItemType('RAINBOW');      // 3% 彩虹弹
-        else if (rand < 0.80) this.setItemType('RAPID');        // 3% 连弩
-        else if (rand < 0.83) this.setItemType('BOUNCY');       // 3% 弹跳球
-        else if (rand < 0.86) this.setItemType('EXPLOSIVE');    // 3% 爆裂弹
-        else if (rand < 0.89) this.setItemType('FLAME_STREAM'); // 3% 火焰喷射
-        else if (rand < 0.94) this.setItemType('STAR');         // 5% 星星
-        else if (rand < 0.97) this.setItemType('SUNFLOWER');    // 3% 向日葵
-        else if (rand < 0.985) this.setItemType('COIN');        // 1.5% 金币
+        else if (rand < 0.84) this.setItemType('STAR');         // 7% 星星
+        else if (rand < 0.91) this.setItemType('SUNFLOWER');    // 7% 向日葵
+        else if (rand < 0.985) this.setItemType('COIN');        // 7.5% 金币
         else this.setItemType('DIAMOND');                       // 1.5% 钻石
     }
 
@@ -2425,24 +2417,27 @@ class QBlock {
             // 普通完成状态
             ctx.fillStyle = '#9CA3AF';
             ctx.fillRect(-20, -20, 40, 40);
-            ctx.strokeStyle = '#6B7280'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+            ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
             ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
             ctx.fillText('✓', 0, 5);
         } else if (this.type === 'item') {
             // 道具类型：显示礼物盒
             const item = ITEM_TYPES[this.itemType] || ITEM_TYPES.COIN;
-            // 礼物盒背景
-            ctx.fillStyle = '#FF6B6B';
+            // 礼物盒背景（金色/彩色）
+            const gradient = ctx.createLinearGradient(-20, -20, 20, 20);
+            gradient.addColorStop(0, '#FFD700');
+            gradient.addColorStop(1, '#FFA500');
+            ctx.fillStyle = gradient;
             ctx.fillRect(-20, -20, 40, 40);
             // 礼物盒丝带
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(-4, -20, 8, 40);
-            ctx.fillRect(-20, -4, 40, 8);
-            // 边框
-            ctx.strokeStyle = '#C92A2A'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
-            // 道具图标
-            ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
-            ctx.fillText(item.emoji, 0, 6);
+            ctx.fillStyle = '#FF6347';
+            ctx.fillRect(-3, -20, 6, 40);
+            ctx.fillRect(-20, -3, 40, 6);
+            // 礼物盒边框
+            ctx.strokeStyle = '#B45309'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+            // 显示道具emoji
+            ctx.font = '20px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(item.emoji, 0, 5);
         } else {
             // 计算题类型：显示问号
             ctx.fillStyle = '#F59E0B';
@@ -2451,7 +2446,6 @@ class QBlock {
             ctx.fillStyle = 'white'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
             ctx.fillText('?', 0, 5);
         }
-
         ctx.restore();
     }
 }
@@ -2512,14 +2506,6 @@ class Bullet {
                 this.r = 7; this.vx = direction * 8; this.damage = 1; this.poisonTick = 30; break;
             case 'rainbow':
                 this.r = 11; this.vx = direction * 9; this.damage = 1; this.splitCount = 0; break;
-            case 'rapid':
-                this.r = 5; this.vx = direction * 14; this.damage = 1; this.pierce = 3; break;
-            case 'bouncy':
-                this.r = 10; this.vx = direction * 10; this.damage = 2; this.bounces = 5; this.gravity = 0.2; break;
-            case 'explosive':
-                this.r = 12; this.vx = direction * 7; this.damage = 2; this.explodeRadius = 80; break;
-            case 'flameStream':
-                this.r = 20; this.vx = direction * 4; this.damage = 1; this.life = 25; this.spread = true; break;
             default:
                 this.damage = 1;
         }
@@ -2540,26 +2526,19 @@ class Bullet {
             if (nearest) {
                 const targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
                 const currentAngle = Math.atan2(this.vy, this.vx);
-                // 计算角度差并平滑转向
+                // 计算角度差并平滑转向（最大转向角度限制为0.15弧度/帧）
                 let angleDiff = targetAngle - currentAngle;
                 // 规范化角度差到[-PI, PI]
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                // 动态调整转向速度：距离越近转向越快，避免绕圈
-                const baseTurn = 0.15;
-                const distanceFactor = Math.max(0.5, Math.min(2.0, nearestDist / 100));
-                const maxTurn = baseTurn * distanceFactor;
+                // 限制最大转向角度
+                const maxTurn = 0.15;
                 const turnAngle = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
                 const newAngle = currentAngle + turnAngle;
                 // 保持速度恒定
                 const speed = 9;
                 this.vx = Math.cos(newAngle) * speed;
                 this.vy = Math.sin(newAngle) * speed;
-                // 近距离加速命中，防止绕圈
-                if (nearestDist < 40) {
-                    this.vx = Math.cos(targetAngle) * (speed + 3);
-                    this.vy = Math.sin(targetAngle) * (speed + 3);
-                }
             }
         }
 
@@ -2569,39 +2548,6 @@ class Bullet {
             this.vy += 0.3;
             if (this.y > 450) { this.y = 450; this.vy *= -0.8; this.bounce++; }
             if (this.bounce > 3) { this.dead = true; return; }
-        }
-
-        // 弹跳球：物理弹跳效果
-        if (this.type === 'bouncy') {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vy += this.gravity || 0.2;
-            // 地面和天花板碰撞
-            if (this.y > 450) {
-                this.y = 450;
-                this.vy *= -0.85;
-                this.bounces--;
-            }
-            if (this.y < 50) {
-                this.y = 50;
-                this.vy *= -0.85;
-                this.bounces--;
-            }
-            // 墙壁碰撞
-            for (let p of platforms) {
-                if (this.x > p[0] && this.x < p[0] + p[2] &&
-                    this.y + this.r > p[1] && this.y - this.r < p[1] + p[3]) {
-                    // 水平碰撞
-                    if (Math.abs(this.x - p[0]) < Math.abs(this.x - (p[0] + p[2]))) {
-                        this.x = p[0] - this.r;
-                    } else {
-                        this.x = p[0] + p[2] + this.r;
-                    }
-                    this.vx *= -0.8;
-                    this.bounces--;
-                }
-            }
-            if (this.bounces <= 0) { this.dead = true; return; }
         }
 
         // 追踪导弹：更新位置（追踪弹有vy速度）
@@ -2645,44 +2591,19 @@ class Bullet {
                     if (e.hit()) { killed = true; }
                 }
 
-                // 毒液弹：持续伤害（可叠加层数）
+                // 毒液弹：持续伤害
                 if (this.type === 'poison' && !killed) {
                     if (!e.poisonTimer) e.poisonTimer = 0;
-                    e.poisonTimer += 90; // 增加持续时间到3秒
-                    e.poisonStacks = Math.min((e.poisonStacks || 0) + 1, 5); // 最多5层
-                }
-
-                // 爆裂弹：范围爆炸
-                if (this.type === 'explosive') {
-                    enemies.forEach(nearby => {
-                        if (!nearby.dead && Math.hypot(this.x - nearby.x, this.y - nearby.y) < this.explodeRadius) {
-                            nearby.hitFlash = 10;
-                            for (let i = 0; i < 2; i++) {
-                                if (nearby.hit()) { score += 100; }
-                            }
-                        }
-                    });
-                    // 爆炸特效
-                    for (let i = 0; i < 8; i++) {
-                        particles.push(new Particle(this.x, this.y, '#FF4500'));
-                    }
+                    e.poisonTimer += 60;
                 }
 
                 if (killed) { score += 100; updateUI(); AudioSys.playCoin(); }
 
-                // 电击弹、激光、水泡泡、火焰喷射可穿透
-                if (this.type === 'electric' || this.type === 'laser' || this.type === 'flameStream') {
+                // 电击弹、激光、水泡泡可穿透
+                if (this.type === 'electric' || this.type === 'laser') {
                     // 穿透，不死亡
                 } else if (this.type === 'bubble') {
                     if (this.bounce > 2) this.dead = true;
-                } else if (this.type === 'rapid') {
-                    // 连弩：可穿透指定数量敌人
-                    this.pierce--;
-                    if (this.pierce <= 0) this.dead = true;
-                } else if (this.type === 'bouncy') {
-                    // 弹跳球：碰到敌人不死亡，只是反弹
-                    this.vx *= -0.8;
-                    this.vy = -Math.abs(this.vy) - 2;
                 } else {
                     this.dead = true;
                 }
@@ -2835,15 +2756,15 @@ class Bullet {
                 ctx.fill();
 
                 // 尾焰效果
-                const missileFlameSize = 8 + Math.random() * 6;
+                const flameSize = 8 + Math.random() * 6;
                 ctx.fillStyle = `rgba(255, 100, 0, ${0.8 + Math.random() * 0.2})`;
                 ctx.shadowColor = '#FF4500';
                 ctx.shadowBlur = 20;
                 ctx.beginPath();
                 ctx.moveTo(-this.r * 2.2, 0);
-                ctx.lineTo(-this.r * 2.2 - missileFlameSize, -this.r * 0.4);
-                ctx.lineTo(-this.r * 2.5 - missileFlameSize * 0.7, 0);
-                ctx.lineTo(-this.r * 2.2 - missileFlameSize, this.r * 0.4);
+                ctx.lineTo(-this.r * 2.2 - flameSize, -this.r * 0.4);
+                ctx.lineTo(-this.r * 2.5 - flameSize * 0.7, 0);
+                ctx.lineTo(-this.r * 2.2 - flameSize, this.r * 0.4);
                 ctx.closePath();
                 ctx.fill();
 
@@ -2885,91 +2806,6 @@ class Bullet {
                 ctx.beginPath(); ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = `hsl(${(hue+240)%360},100%,60%)`;
                 ctx.beginPath(); ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
-                break;
-
-            case 'rapid':
-                // 连弩 - 银色箭矢
-                ctx.shadowColor = '#C0C0C0';
-                ctx.shadowBlur = 8;
-                ctx.fillStyle = '#C0C0C0';
-                const arrowAngle = Math.atan2(this.vy, this.vx);
-                ctx.rotate(arrowAngle);
-                // 箭杆
-                ctx.fillRect(-this.r, -2, this.r * 4, 4);
-                // 箭头
-                ctx.beginPath();
-                ctx.moveTo(this.r * 2, 0);
-                ctx.lineTo(this.r, -5);
-                ctx.lineTo(this.r, 5);
-                ctx.closePath();
-                ctx.fill();
-                break;
-
-            case 'bouncy':
-                // 弹跳球 - 紫色魔法球带光晕
-                ctx.shadowColor = '#9370DB';
-                ctx.shadowBlur = 15;
-                const bounceHue = (frameCount * 10) % 60 + 260; // 紫色范围
-                ctx.fillStyle = `hsl(${bounceHue},80%,60%)`;
-                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
-                // 内部波纹效果
-                ctx.strokeStyle = `hsl(${bounceHue},100%,80%)`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r * (0.5 + 0.3 * Math.sin(frameCount * 0.3)), 0, Math.PI * 2);
-                ctx.stroke();
-                break;
-
-            case 'explosive':
-                // 爆裂弹 - 红色炸弹形状
-                ctx.shadowColor = '#FF0000';
-                ctx.shadowBlur = 15;
-                ctx.fillStyle = '#8B0000';
-                ctx.beginPath(); ctx.arc(0, 0, this.r, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#FF4500';
-                ctx.beginPath(); ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2); ctx.fill();
-                // 闪烁的引线效果
-                if (frameCount % 10 < 5) {
-                    ctx.fillStyle = '#FFD700';
-                    ctx.beginPath(); ctx.arc(0, 0, this.r * 0.3, 0, Math.PI * 2); ctx.fill();
-                }
-                break;
-
-            case 'flameStream':
-                // 火焰喷射 - 魂斗罗式火焰效果
-                const flameLife = this.life / 25;
-                const flameSize = this.r * (0.8 + Math.random() * 0.4);
-                // 外焰 - 红色
-                ctx.shadowColor = '#FF4500';
-                ctx.shadowBlur = 25;
-                ctx.fillStyle = `rgba(255, 69, 0, ${flameLife})`;
-                ctx.beginPath();
-                ctx.arc(0, 0, flameSize, 0, Math.PI * 2);
-                ctx.fill();
-                // 中焰 - 橙色
-                ctx.fillStyle = `rgba(255, 140, 0, ${flameLife})`;
-                ctx.beginPath();
-                ctx.arc(0, 0, flameSize * 0.7, 0, Math.PI * 2);
-                ctx.fill();
-                // 内焰 - 黄色
-                ctx.fillStyle = `rgba(255, 215, 0, ${flameLife})`;
-                ctx.beginPath();
-                ctx.arc(0, 0, flameSize * 0.4, 0, Math.PI * 2);
-                ctx.fill();
-                // 核心 - 白色
-                ctx.fillStyle = `rgba(255, 255, 200, ${flameLife})`;
-                ctx.beginPath();
-                ctx.arc(0, 0, flameSize * 0.2, 0, Math.PI * 2);
-                ctx.fill();
-                // 火焰喷射粒子
-                if (Math.random() < 0.3) {
-                    ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${flameLife * 0.5})`;
-                    const px = (Math.random() - 0.5) * flameSize * 2;
-                    const py = (Math.random() - 0.5) * flameSize * 2;
-                    ctx.beginPath();
-                    ctx.arc(px, py, 2 + Math.random() * 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
                 break;
 
             default:
@@ -3020,31 +2856,15 @@ class Enemy {
             return;
         }
 
-        // 毒液持续伤害（支持多层叠加）
+        // 毒液持续伤害
         if (this.poisonTimer > 0) {
             this.poisonTimer--;
-            // 每30帧造成伤害，层数越多伤害越高
             if (this.poisonTimer % 30 === 0 && this.hp > 1) {
-                const stacks = this.poisonStacks || 1;
-                const damage = Math.min(stacks, 3); // 最多3点伤害/次
-                for (let i = 0; i < damage; i++) {
-                    this.hp--;
-                    if (this.hp <= 0) break;
-                }
+                this.hp--;
                 this.hitFlash = 5;
-                score += 20 * damage;
+                score += 20;
                 updateUI();
-                if (this.hp <= 0) {
-                    this.dead = true;
-                    score += 100;
-                    updateUI();
-                    AudioSys.playCoin();
-                    return;
-                }
-            }
-            // 毒液效果结束时重置层数
-            if (this.poisonTimer <= 0) {
-                this.poisonStacks = 0;
+                if (this.hp <= 0) { this.dead = true; score += 100; updateUI(); AudioSys.playCoin(); return; }
             }
         }
 
@@ -3078,58 +2898,21 @@ class Enemy {
         ctx.fillRect(-12, 15, 8, 8);
         ctx.fillRect(4, 15, 8, 8);
 
-        // 冻结特效（增强版）
+        // 冻结特效
         if (this.freezeTime > 0) {
-            // 冰晶边框
-            ctx.strokeStyle = '#E0F7FA';
-            ctx.lineWidth = 4;
-            ctx.setLineDash([5, 3]);
-            ctx.strokeRect(-18, -18, 36, 36);
-            ctx.setLineDash([]);
-            // 冰层覆盖
-            ctx.fillStyle = 'rgba(135,206,235,0.5)';
-            ctx.fillRect(-18, -18, 36, 36);
-            // 冰晶装饰
-            ctx.strokeStyle = '#B3E5FC';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-15, -15); ctx.lineTo(-5, -5);
-            ctx.moveTo(15, -15); ctx.lineTo(5, -5);
-            ctx.moveTo(-15, 15); ctx.lineTo(-5, 5);
-            ctx.moveTo(15, 15); ctx.lineTo(5, 5);
-            ctx.stroke();
-            // 寒气粒子
-            if (frameCount % 10 < 5) {
-                ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                ctx.beginPath();
-                ctx.arc(-10 + Math.random() * 20, -25, 2 + Math.random() * 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-17, -17, 34, 34);
+            ctx.fillStyle = 'rgba(135,206,235,0.3)';
+            ctx.fillRect(-17, -17, 34, 34);
         }
 
-        // 毒液特效（根据层数显示不同效果）
-        if (this.poisonTimer > 0) {
-            const stacks = this.poisonStacks || 1;
-            const alpha = 0.4 + stacks * 0.15;
-            const greenIntensity = Math.min(255, 50 + stacks * 40);
-            ctx.fillStyle = `rgba(50, ${greenIntensity}, 50, ${alpha})`;
-            // 层数越多气泡越多
-            const bubbleCount = Math.min(stacks + 2, 6);
-            const positions = [[-10, -20], [8, -10], [0, 15], [-8, 5], [12, 8], [0, -5]];
-            for (let i = 0; i < bubbleCount; i++) {
-                if (this.poisonTimer % 15 === i % 15) {
-                    const pos = positions[i % positions.length];
-                    const size = 3 + Math.random() * 3;
-                    ctx.beginPath(); ctx.arc(pos[0], pos[1], size, 0, Math.PI*2); ctx.fill();
-                }
-            }
-            // 显示层数数字
-            if (stacks > 1) {
-                ctx.fillStyle = '#32CD32';
-                ctx.font = 'bold 12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`x${stacks}`, 0, -25);
-            }
+        // 毒液特效
+        if (this.poisonTimer > 0 && this.poisonTimer % 10 < 5) {
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath(); ctx.arc(-10, -20, 4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8, -10, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 15, 3, 0, Math.PI*2); ctx.fill();
         }
 
         ctx.globalAlpha = 1;
@@ -3259,34 +3042,26 @@ class BirdEnemy {
 // ==================== 坑洞类（地面陷阱）====================
 class Pit {
     constructor(x, width) {
-        this.x = x; // 坑洞左侧位置
-        this.y = 450; // 地面高度
-        this.width = width || 60; // 坑洞宽度
+        this.x = x;
+        this.y = 450;
+        this.width = width || 60;
         this.dead = false;
-        this.resetTriggered = false; // 防止重复触发重置
+        this.resetTriggered = false;
     }
 
     update() {
-        // 检测玩家是否掉入坑洞
         if (!player) return;
-
-        // 玩家在坑洞上方且正在下落
         const playerInPitX = player.x > this.x && player.x < this.x + this.width;
         const playerFalling = player.y > 440 && player.vy > 0;
-
         if (playerInPitX && playerFalling) {
-            // 玩家掉入坑洞，关卡重置
             this.triggerReset();
         }
     }
 
     triggerReset() {
-        // 显示掉落动画
         player.vy = 5;
         player.y += 10;
-
         if (player.y > 600 && !this.resetTriggered) {
-            // 玩家掉出屏幕，重置关卡（只触发一次）
             this.resetTriggered = true;
             showHint('💀 掉落坑洞！关卡重置...');
             setTimeout(() => {
@@ -3297,10 +3072,7 @@ class Pit {
     }
 
     draw() {
-        // 绘制坑洞（黑色深渊）
         ctx.save();
-
-        // 坑洞上方的警告标记（只在接近时显示）
         if (player && Math.abs(player.x - (this.x + this.width/2)) < 150) {
             ctx.globalAlpha = 0.7;
             ctx.fillStyle = '#FFD700';
@@ -3308,16 +3080,11 @@ class Pit {
             ctx.textAlign = 'center';
             ctx.fillText('⚠️', this.x + this.width/2 - cam, this.y - 40);
         }
-
-        // 坑洞本体（黑色）
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(this.x - cam, this.y, this.width, 100);
-
-        // 坑洞边缘（深灰色）
         ctx.fillStyle = '#333';
         ctx.fillRect(this.x - cam, this.y, 5, 10);
         ctx.fillRect(this.x + this.width - 5 - cam, this.y, 5, 10);
-
         ctx.restore();
     }
 }
@@ -3326,54 +3093,42 @@ class Pit {
 class RollingStone {
     constructor(x, y, direction) {
         this.x = x;
-        this.y = y || 420; // 默认在地面滚动
-        this.r = 20; // 石头半径
-        this.dir = direction || 1; // 1向右，-1向左
-        this.speed = 2 + Math.random() * 2; // 随机速度 2-4
-        this.rotation = 0; // 旋转角度
+        this.y = y || 420;
+        this.r = 20;
+        this.dir = direction || 1;
+        this.speed = 2 + Math.random() * 2;
+        this.rotation = 0;
         this.dead = false;
         this.hitFlash = 0;
     }
 
     update() {
         if (this.dead) return;
-
-        // 滚动移动
         this.x += this.speed * this.dir;
         this.rotation += this.speed * 0.1 * this.dir;
-
-        // 循环滚动（从一边滚到另一边）
         const levelEnd = flag ? flag.x + 200 : 2000;
         if (this.x > levelEnd) {
             this.x = 50;
         } else if (this.x < 0) {
             this.x = levelEnd - 50;
         }
-
-        // 检测与玩家碰撞
         if (player && !player.invincible) {
             const dist = Math.hypot(this.x - player.x, this.y - player.y);
             if (dist < this.r + player.r) {
-                // 石头撞到玩家
                 if (player.hit()) {
                     // 玩家死亡
                 }
-                // 石头反弹
                 this.dir *= -1;
                 this.hitFlash = 10;
             }
         }
-
-        // 检测与子弹碰撞（可被击碎）
         for (let b of bullets) {
             if (!b.dead && Math.hypot(this.x - b.x, this.y - b.y) < this.r + b.r) {
                 b.dead = true;
                 this.hitFlash = 5;
-                // 石头被击中后略微减速
                 this.speed = Math.max(1, this.speed * 0.9);
             }
         }
-
         if (this.hitFlash > 0) this.hitFlash--;
     }
 
@@ -3382,10 +3137,7 @@ class RollingStone {
         ctx.save();
         ctx.translate(this.x - cam, this.y);
         ctx.rotate(this.rotation);
-
         if (this.hitFlash > 0) ctx.globalAlpha = 0.5;
-
-        // 石头主体（灰色圆形）
         const stoneGrad = ctx.createRadialGradient(-5, -5, 0, 0, 0, this.r);
         stoneGrad.addColorStop(0, '#A0A0A0');
         stoneGrad.addColorStop(1, '#606060');
@@ -3393,8 +3145,6 @@ class RollingStone {
         ctx.beginPath();
         ctx.arc(0, 0, this.r, 0, Math.PI * 2);
         ctx.fill();
-
-        // 石头纹理（裂缝）
         ctx.strokeStyle = '#404040';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -3403,16 +3153,17 @@ class RollingStone {
         ctx.lineTo(5, -8);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(-5, 8);
-        ctx.lineTo(2, 3);
+        ctx.moveTo(-5, 5);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(8, 6);
         ctx.stroke();
-
-        // 高光
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.beginPath();
-        ctx.arc(-6, -6, 6, 0, Math.PI * 2);
-        ctx.fill();
-
+        ctx.fillStyle = '#404040';
+        for (let i = 0; i < 3; i++) {
+            const angle = (i * Math.PI * 2 / 3) + this.rotation;
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * 10, Math.sin(angle) * 10, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 }
@@ -3468,8 +3219,6 @@ class SpecialTransformBox {
 
 // ==================== 横版闯关初始化（加长版）====================
 let enemies = [];
-let pits = [];
-let stones = [];
 function initPlatformer() {
     player = new Player(); cam = 0;
     blocks = []; coins = []; questions = []; items = []; enemies = []; pits = []; stones = [];
@@ -3595,7 +3344,7 @@ function initPlatformer() {
         pits.push(new Pit(17000, 100));
         pits.push(new Pit(21000, 90));
 
-        // 滚动石头（第三关6个，更快）
+        // 滚动石头（第三关6个）
         stones.push(new RollingStone(1000, 430, 1));
         stones.push(new RollingStone(3500, 430, -1));
         stones.push(new RollingStone(7000, 430, 1));
@@ -3694,6 +3443,12 @@ function updatePlatformer(timestamp) {
     // 移除死亡炮弹
     bullets = bullets.filter(b => !b.dead);
 
+    // 更新坑洞
+    for (let p of pits) p.update();
+
+    // 更新滚动石头
+    for (let s of stones) s.update();
+
     for (let q of questions) {
         if (!q.done && Math.hypot(player.x-q.x, player.y-q.y) < 40) {
             // 互斥逻辑：根据方块类型决定是计算题还是道具
@@ -3721,10 +3476,6 @@ function updatePlatformer(timestamp) {
                          q.itemType === 'MISSILE' ? '🚀 追踪导弹!' :
                          q.itemType === 'POISON' ? '☠️ 毒液弹!' :
                          q.itemType === 'RAINBOW' ? '🌈 彩虹弹!' :
-                         q.itemType === 'RAPID' ? '🏹 连弩!' :
-                         q.itemType === 'BOUNCY' ? '🔮 弹跳球!' :
-                         q.itemType === 'EXPLOSIVE' ? '💣 爆裂弹!' :
-                         q.itemType === 'FLAME_STREAM' ? '🔥 火焰喷射!' :
                          q.itemType === 'STAR' ? '⭐ 星星!' :
                          q.itemType === 'SUNFLOWER' ? '🌻 向日葵!' :
                          q.itemType === 'COIN' ? '🪙 金币!' : '💎 钻石!');
@@ -3734,12 +3485,6 @@ function updatePlatformer(timestamp) {
             }
         }
     }
-
-    // 更新坑洞
-    for (let p of pits) p.update();
-
-    // 更新滚动石头
-    for (let s of stones) s.update();
 
     // 特殊变身箱子碰撞检测
     if (specialTransformBox && !specialTransformBox.done) {
@@ -3777,6 +3522,83 @@ function checkWinCondition() {
             AudioSys.playWin();
             showVictoryScreen();
         }
+    }
+}
+
+// 关卡重置（用于坑洞掉落等陷阱）
+function resetLevel() {
+    // 重置玩家位置到关卡起点
+    player.x = 100;
+    player.y = 300;
+    player.vx = 0;
+    player.vy = 0;
+    player.isTransformed = false;
+    player.transformTimer = 0;
+    player.invincible = 120; // 给予短暂无敌时间
+    player.isBig = false;
+    player.j = 0;
+    player.g = false;
+
+    // 重置相机
+    cam = 0;
+
+    // 重置游戏对象（保留当前关卡进度）
+    bullets = [];
+    items = [];
+
+    // 重新初始化敌人、坑洞、石头
+    enemies = [];
+    pits = [];
+    stones = [];
+
+    const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
+
+    // 根据关卡重新生成敌人、坑洞、石头
+    if (level === 1) {
+        for (let i = 800; i < levelLength - 1000; i += 400) {
+            enemies.push(new Enemy(i, 420, 100 + Math.random() * 100));
+        }
+        for (let i = 1200; i < levelLength - 1000; i += 800) {
+            enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
+        }
+        pits.push(new Pit(2500, 80));
+        pits.push(new Pit(8000, 100));
+        stones.push(new RollingStone(1500, 430, 1));
+        stones.push(new RollingStone(6000, 430, -1));
+    } else if (level === 2) {
+        for (let i = 700; i < levelLength - 1000; i += 350) {
+            enemies.push(new Enemy(i, 420, 80 + Math.random() * 120));
+        }
+        for (let i = 1000; i < levelLength - 1000; i += 600) {
+            enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
+        }
+        pits.push(new Pit(2000, 90));
+        pits.push(new Pit(5500, 80));
+        pits.push(new Pit(11000, 100));
+        pits.push(new Pit(16000, 90));
+        stones.push(new RollingStone(1200, 430, 1));
+        stones.push(new RollingStone(4500, 430, -1));
+        stones.push(new RollingStone(9000, 430, 1));
+        stones.push(new RollingStone(14000, 430, -1));
+    } else {
+        for (let i = 600; i < levelLength - 1000; i += 300) {
+            enemies.push(new Enemy(i, 420, 60 + Math.random() * 150));
+        }
+        for (let i = 800; i < levelLength - 1000; i += 400) {
+            enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
+        }
+        pits.push(new Pit(1800, 100));
+        pits.push(new Pit(4500, 90));
+        pits.push(new Pit(9000, 110));
+        pits.push(new Pit(13000, 80));
+        pits.push(new Pit(17000, 100));
+        pits.push(new Pit(21000, 90));
+        stones.push(new RollingStone(1000, 430, 1));
+        stones.push(new RollingStone(3500, 430, -1));
+        stones.push(new RollingStone(7000, 430, 1));
+        stones.push(new RollingStone(11500, 430, -1));
+        stones.push(new RollingStone(15000, 430, 1));
+        stones.push(new RollingStone(19500, 430, -1));
     }
 }
 
@@ -3856,8 +3678,7 @@ function drawPlatformer() {
         const modeNames = {
             electric: '⚡电击弹', spread: '🔥散弹枪', flame: '🐉火龙炮',
             ice: '❄️冰冻弹', bubble: '🫧水泡泡', laser: '⚡激光炮',
-            missile: '🚀追踪导弹', poison: '☠️毒液弹', rainbow: '🌈彩虹弹',
-            rapid: '🏹连弩', bouncy: '🔮弹跳球', explosive: '💣爆裂弹', flameStream: '🔥火焰喷射'
+            missile: '🚀追踪导弹', poison: '☠️毒液弹', rainbow: '🌈彩虹弹'
         };
         ctx.fillText(modeNames[playerFireMode] || playerFireMode, 15, 120);
         ctx.textAlign = 'start';
@@ -5051,83 +4872,6 @@ function loop(timestamp) {
     platformerAnimId = requestAnimationFrame(loop);
 }
 
-// 关卡重置（用于坑洞掉落等陷阱）
-function resetLevel() {
-    // 重置玩家位置到关卡起点
-    player.x = 100;
-    player.y = 300;
-    player.vx = 0;
-    player.vy = 0;
-    player.isTransformed = false;
-    player.transformTimer = 0;
-    player.invincible = 120; // 给予短暂无敌时间
-    player.isBig = false;
-    player.j = 0;
-    player.g = false;
-
-    // 重置相机
-    cam = 0;
-
-    // 重置游戏对象（保留当前关卡进度）
-    bullets = [];
-    items = [];
-
-    // 重新初始化敌人、坑洞、石头
-    enemies = [];
-    pits = [];
-    stones = [];
-
-    const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
-
-    // 根据关卡重新生成敌人、坑洞、石头
-    if (level === 1) {
-        for (let i = 800; i < levelLength - 1000; i += 400) {
-            enemies.push(new Enemy(i, 420, 100 + Math.random() * 100));
-        }
-        for (let i = 1200; i < levelLength - 1000; i += 800) {
-            enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
-        }
-        pits.push(new Pit(2500, 80));
-        pits.push(new Pit(8000, 100));
-        stones.push(new RollingStone(1500, 430, 1));
-        stones.push(new RollingStone(6000, 430, -1));
-    } else if (level === 2) {
-        for (let i = 700; i < levelLength - 1000; i += 350) {
-            enemies.push(new Enemy(i, 420, 80 + Math.random() * 120));
-        }
-        for (let i = 1000; i < levelLength - 1000; i += 600) {
-            enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
-        }
-        pits.push(new Pit(2000, 90));
-        pits.push(new Pit(5500, 80));
-        pits.push(new Pit(11000, 100));
-        pits.push(new Pit(16000, 90));
-        stones.push(new RollingStone(1200, 430, 1));
-        stones.push(new RollingStone(4500, 430, -1));
-        stones.push(new RollingStone(9000, 430, 1));
-        stones.push(new RollingStone(14000, 430, -1));
-    } else {
-        for (let i = 600; i < levelLength - 1000; i += 300) {
-            enemies.push(new Enemy(i, 420, 60 + Math.random() * 150));
-        }
-        for (let i = 800; i < levelLength - 1000; i += 400) {
-            enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
-        }
-        pits.push(new Pit(1800, 100));
-        pits.push(new Pit(4500, 90));
-        pits.push(new Pit(9000, 110));
-        pits.push(new Pit(13000, 80));
-        pits.push(new Pit(17000, 100));
-        pits.push(new Pit(21000, 90));
-        stones.push(new RollingStone(1000, 430, 1));
-        stones.push(new RollingStone(3500, 430, -1));
-        stones.push(new RollingStone(7000, 430, 1));
-        stones.push(new RollingStone(11500, 430, -1));
-        stones.push(new RollingStone(15000, 430, 1));
-        stones.push(new RollingStone(19500, 430, -1));
-    }
-}
-
 function restart() {
     // 先设置状态为over，阻止所有游戏循环继续运行
     state = 'over';
@@ -5370,64 +5114,8 @@ function fireBullet() {
             break;
 
         case 'rainbow':
-            // 彩虹弹 - 多彩效果，发射5发扇形弹幕
-            for (let i = -2; i <= 2; i++) {
-                const b = new Bullet(player.x + direction * 30, player.y, direction, 'rainbow');
-                const angle = i * 0.15 * direction;
-                const baseAngle = direction === 1 ? 0 : Math.PI;
-                const finalAngle = baseAngle + angle;
-                b.vx = Math.cos(finalAngle) * 9;
-                b.vy = Math.sin(finalAngle) * 9;
-                bullets.push(b);
-            }
-            break;
-
-        case 'rapid':
-            // 连弩 - 三连发快速射击，间隔50ms
-            const rapidFire = (count) => {
-                if (count <= 0) return;
-                bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'rapid'));
-                if (count > 1) {
-                    setTimeout(() => rapidFire(count - 1), 50);
-                }
-            };
-            rapidFire(3);
-            // 连弩冷却时间更短
-            lastFireTime -= 150;
-            break;
-
-        case 'bouncy':
-            // 弹跳球 - 弹跳穿透
-            const bouncy = new Bullet(player.x + direction * 30, player.y - 10, direction, 'bouncy');
-            bouncy.vy = -4; // 初始向上抛出
-            bullets.push(bouncy);
-            break;
-
-        case 'explosive':
-            // 爆裂弹 - 范围爆炸伤害
-            bullets.push(new Bullet(player.x + direction * 35, player.y, direction, 'explosive'));
-            break;
-
-        case 'flameStream':
-            // 火焰喷射 - 短距离扇形火焰（参考魂斗罗）
-            const flameCount = 5;
-            for (let i = 0; i < flameCount; i++) {
-                const b = new Bullet(
-                    player.x + direction * (30 + i * 15),
-                    player.y + (Math.random() - 0.5) * 10,
-                    direction,
-                    'flameStream'
-                );
-                // 扇形扩散
-                const spreadAngle = (Math.random() - 0.5) * 0.5 * direction;
-                const baseAngle = direction === 1 ? 0 : Math.PI;
-                const finalAngle = baseAngle + spreadAngle;
-                b.vx = Math.cos(finalAngle) * (4 + Math.random() * 2);
-                b.vy = Math.sin(finalAngle) * (2 + Math.random() * 2);
-                bullets.push(b);
-            }
-            // 火焰可以连续喷射，冷却更短
-            lastFireTime -= 100;
+            // 彩虹弹 - 多彩效果
+            bullets.push(new Bullet(player.x + direction * 30, player.y, direction, 'rainbow'));
             break;
 
         default:
