@@ -715,6 +715,24 @@ class Player {
         }
     }
 
+    // 玩家被击中
+    hit() {
+        if (this.invincible > 0) return false;
+
+        if (this.isBig) {
+            this.isBig = false;
+            this.invincible = 120;
+            AudioSys.playFail();
+            return false;
+        } else {
+            AudioSys.playFail();
+            state = 'over';
+            playerFireMode = 'normal';
+            setTimeout(() => restart(), 50);
+            return true;
+        }
+    }
+
     draw() {
         ctx.save();
         const scale = this.isBig ? 1.5 : 1;
