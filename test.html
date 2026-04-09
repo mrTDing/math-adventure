@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试</title>
+</head>
+<body>
+    <h1>JavaScript 语法检查</h1>
+    <div id="result"></div>
+    <script>
+        try {
+            // 测试基本语法
+            const test = () => {
+                return '箭头函数正常';
+            };
+
+            // 测试类定义
+            class TestClass {
+                constructor() {
+                    this.x = 1;
+                }
+                hit() {
+                    return true;
+                }
+            }
+
+            const t = new TestClass();
+            document.getElementById('result').innerHTML = '✅ JavaScript 基础语法正常<br>TestClass.hit() = ' + t.hit();
+        } catch (e) {
+            document.getElementById('result').innerHTML = '❌ 错误: ' + e.message;
+        }
+    </script>
+</body>
+</html>

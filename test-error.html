@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>错误诊断</title>
+</head>
+<body>
+    <h1>JavaScript 错误诊断</h1>
+    <div id="console" style="font-family: monospace; white-space: pre; background: #f0f0f0; padding: 10px; min-height: 300px;"></div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+        function log(msg) {
+            consoleDiv.textContent += msg + '\n';
+        }
+
+        window.onerror = function(msg, url, line, col, error) {
+            log('ERROR: ' + msg + ' at line ' + line);
+            return false;
+        };
+
+        log('Starting diagnostic...');
+
+        try {
+            // Test 1: Basic syntax
+            log('Test 1: Basic arrow function...');
+            const test1 = () => 'ok';
+            log('  Result: ' + test1());
+
+            // Test 2: Class definition
+            log('Test 2: Class definition...');
+            class TestClass {
+                constructor() { this.x = 1; }
+                hit() { return true; }
+            }
+            const tc = new TestClass();
+            log('  Result: hit() = ' + tc.hit());
+
+            // Test 3: Load actual game script
+            log('Test 3: Loading game script...');
+
+            fetch('index.html')
+                .then(r => r.text())
+                .then(html => {
+                    log('  index.html loaded: ' + html.length + ' bytes');
+
+                    // Extract and execute script
+                    const scripts = html.match(/<script[^>]*>(.*?)<\/script>/gs);
+                    log('  Found ' + scripts.length + ' script blocks');
+
+                    // Check for specific issues
+                    if (html.includes('class Pit')) {
+                        log('  ✓ Pit class found');
+                    } else {
+                        log('  ✗ Pit class MISSING');
+                    }
+
+                    if (html.includes('class RollingStone')) {
+                        log('  ✓ RollingStone class found');
+                    } else {
+                        log('  ✗ RollingStone class MISSING');
+                    }
+
+                    if (html.includes('hit()')) {
+                        log('  ✓ hit() method found');
+                    } else {
+                        log('  ✗ hit() method MISSING');
+                    }
+
+                    // Check for any obvious issues
+                    const openBraces = (html.match(/{/g) || []).length;
+                    const closeBraces = (html.match(/}/g) || []).length;
+                    log('  Braces: ' + openBraces + ' open, ' + closeBraces + ' close');
+
+                    if (openBraces !== closeBraces) {
+                        log('  ⚠ BRACE MISMATCH!');
+                    } else {
+                        log('  ✓ Braces balanced');
+                    }
+
+                    log('\nAll checks passed. No obvious syntax errors found.');
+                })
+                .catch(e => {
+                    log('  Error loading index.html: ' + e.message);
+                });
+
+        } catch (e) {
+            log('CRITICAL ERROR: ' + e.message);
+            log(e.stack);
+        }
+    </script>
+</body>
+</html>
