@@ -4355,35 +4355,17 @@ let enemies = [];
 let terrainPoints = []; // 地形高度点数组 [x, y]
 let terrainSegments = []; // 地形线段数组，用于碰撞检测
 
-// 生成起伏地形（冒险岛风格：波段起伏，有平地有起伏，但坡度平缓）
+// 生成水平地形（取消起伏）
 function generateTerrain(levelLength, pitList, seed = 1) {
     const points = [];
     const segments = [];
     const baseY = 450;
-    const amplitude = 25; // 减小起伏幅度（原来是50）
-    const maxSlope = 0.15; // 最大坡度限制（防止需要跳跃）
 
     // 按x坐标排序坑洞
     const sortedPits = [...pitList].sort((a, b) => a.x - b.x);
 
-    // 预先生成基础波形（低分辨率）
-    const wavePoints = [];
-    const waveSpacing = 200; // 每200像素一个波形控制点
-    for (let x = 0; x <= levelLength + waveSpacing; x += waveSpacing) {
-        // 交替生成平地和轻微起伏
-        const isFlat = Math.floor(x / (1000 + Math.random() * 500)) % 2 === 0;
-        if (isFlat) {
-            wavePoints.push({ x, y: baseY });
-        } else {
-            wavePoints.push({ x, y: baseY + (Math.random() - 0.5) * amplitude * 2 });
-        }
-    }
-
-    // 生成地形点（每10像素一个点）
-    let lastY = baseY;
+    // 生成水平地形点（每10像素一个点）
     for (let x = 0; x <= levelLength; x += 10) {
-        let y = baseY;
-
         // 检查是否在坑洞中
         let inPit = false;
         for (const pit of sortedPits) {
@@ -4394,42 +4376,7 @@ function generateTerrain(levelLength, pitList, seed = 1) {
         }
 
         if (!inPit) {
-            // 在波形控制点之间插值
-            for (let i = 0; i < wavePoints.length - 1; i++) {
-                if (x >= wavePoints[i].x && x < wavePoints[i + 1].x) {
-                    const t = (x - wavePoints[i].x) / (wavePoints[i + 1].x - wavePoints[i].x);
-                    // 使用平滑插值
-                    const rawY = wavePoints[i].y + (wavePoints[i + 1].y - wavePoints[i].y) * t;
-                    // 添加微小噪声
-                    y = rawY + Math.sin(x * 0.05) * 3;
-                    break;
-                }
-            }
-
-            // 限制坡度：确保与上一个点的高度差不超过限制
-            const maxDelta = 10 * maxSlope; // 每10像素的最大高度变化
-            if (points.length > 0 && points[points.length - 1].y !== null) {
-                const prevY = points[points.length - 1].y;
-                if (y > prevY + maxDelta) y = prevY + maxDelta;
-                if (y < prevY - maxDelta) y = prevY - maxDelta;
-            }
-
-            // 确保坑洞边缘高度与坑洞齐平（坑洞底部y=550）
-            for (const pit of sortedPits) {
-                // 坑洞前边缘：平滑下降到坑洞
-                if (x >= pit.x - 50 && x < pit.x) {
-                    const t = (x - (pit.x - 50)) / 50;
-                    y = lastY + (550 - lastY) * t;
-                }
-                // 坑洞后边缘：平滑上升出坑洞
-                if (x > pit.x + pit.width && x <= pit.x + pit.width + 50) {
-                    const t = (x - (pit.x + pit.width)) / 50;
-                    y = 550 + (baseY - 550) * t;
-                }
-            }
-
-            lastY = y;
-            points.push({ x, y });
+            points.push({ x, y: baseY });
         } else {
             // 坑洞位置不生成地形点
             if (points.length > 0 && points[points.length - 1].y !== null) {
