@@ -691,43 +691,8 @@ class Player {
             }
         }
 
-        // 起伏地形地面碰撞
-        if (!isInUnderground && terrainSegments.length > 0 && !inPit) {
-            // 获取当前x位置的地面高度
-            const groundY = getGroundY(this.x);
-
-            // 检查玩家是否在地面附近（使用之前的地面碰撞逻辑）
-            if (this.vy > 0 && py + pr > groundY && py - pr < groundY + 20) {
-                // 只有当玩家从上方落下时才站在地面上
-                if (py - pr - this.vy <= groundY + 5) {
-                    this.y = groundY - pr;
-                    this.vy = 0;
-                    this.g = true;
-                    this.j = 0;
-
-                    // 根据地面坡度调整玩家的y位置（防止穿模）
-                    const nextGroundY = getGroundY(this.x + this.vx * 2);
-                    if (Math.abs(nextGroundY - groundY) > 2) {
-                        // 在斜坡上，轻微调整位置
-                        this.y = nextGroundY - pr;
-                    }
-                }
-            }
-
-            // 额外的地面检测（左右脚）
-            const leftFootY = getGroundY(this.x - pr * 0.5);
-            const rightFootY = getGroundY(this.x + pr * 0.5);
-            const minGroundY = Math.min(leftFootY, rightFootY);
-
-            // 如果玩家在地面下方，推上来
-            if (py + pr > minGroundY + 5 && this.vy <= 0) {
-                // 玩家可能卡在地形里了，调整位置
-                if (py + pr - minGroundY < pr) {
-                    this.y = minGroundY - pr;
-                }
-            }
-        } else {
-            // 地下关卡或没有地形数据时使用旧的平地碰撞
+        // 地面碰撞（使用blocks，水平地面）
+        if (!inPit) {
             for (let i = 0; i < blocks.length; i++) {
                 const p = blocks[i];
                 if (px + pr > p[0] && px - pr < p[0] + p[2] && py + pr > p[1] && py - pr < p[1] + p[3]) {
@@ -3296,8 +3261,8 @@ class Enemy {
 
         this.x += this.speed * this.dir;
 
-        // 敌人贴地移动（同步y坐标到地面高度）
-        this.y = getGroundY(this.x) - 15;
+        // 敌人贴地移动（水平地面 y=450）
+        this.y = 435;
 
         if (this.x > this.startX + this.patrolDist || this.x < this.startX - this.patrolDist) {
             this.dir *= -1;
@@ -3308,12 +3273,8 @@ class Enemy {
         if (this.dead) return;
         ctx.save();
 
-        // 获取地面角度，让敌人贴地倾斜（冒险岛风格）
-        const groundAngle = getGroundAngle(this.x);
-        const groundY = getGroundY(this.x);
-
-        ctx.translate(this.x - cam, groundY);
-        ctx.rotate(groundAngle); // 根据地面的角度旋转
+        // 水平地面，敌人直立绘制
+        ctx.translate(this.x - cam, 450);
 
         if (this.hitFlash > 0) ctx.globalAlpha = 0.5;
 
