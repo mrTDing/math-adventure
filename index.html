@@ -651,6 +651,13 @@ class Player {
         this.flashFrame = 0;
         this.transformTimer = 0; // 变身倒计时
         this.isTransformed = false; // 是否处于变身状态
+        // 耀西特殊属性
+        this.yoshiTongueOut = false; // 舌头是否伸出
+        this.yoshiTongueTimer = 0; // 舌头伸出计时
+        this.yoshiTongueLength = 0; // 舌头当前长度
+        this.yoshiMouthEnemy = null; // 嘴里吃掉的敌人类型
+        this.yoshiEggAmmo = 0; // 耀西的蛋弹药数量
+        this.yoshiFacingRight = true; // 耀西朝向
     }
 
     jump() {
@@ -713,6 +720,79 @@ class Player {
                 showHint('变身结束！');
             }
         }
+
+        // 耀西舌头逻辑
+        if (selectedChar?.id === 'yoshi') {
+            this.updateYoshiTongue();
+        }
+    }
+
+    // 耀西吐舌头吃敌人
+    updateYoshiTongue() {
+        // 更新朝向
+        if (this.vx > 0.1) this.yoshiFacingRight = true;
+        if (this.vx < -0.1) this.yoshiFacingRight = false;
+
+        // 舌头伸出逻辑
+        if (this.yoshiTongueOut) {
+            this.yoshiTongueTimer++;
+
+            // 舌头伸出阶段 (0-10帧)
+            if (this.yoshiTongueTimer <= 10) {
+                this.yoshiTongueLength = (this.yoshiTongueTimer / 10) * 80;
+            }
+            // 舌头收回阶段 (11-20帧)
+            else if (this.yoshiTongueTimer <= 20) {
+                this.yoshiTongueLength = ((20 - this.yoshiTongueTimer) / 10) * 80;
+            }
+            // 舌头完全收回
+            else {
+                this.yoshiTongueOut = false;
+                this.yoshiTongueLength = 0;
+                this.yoshiTongueTimer = 0;
+            }
+
+            // 检测是否吃到敌人
+            if (this.yoshiTongueTimer <= 10 && !this.yoshiMouthEnemy) {
+                const tongueX = this.x + (this.yoshiFacingRight ? 1 : -1) * (30 + this.yoshiTongueLength);
+                const tongueY = this.y - 10;
+
+                for (let e of enemies) {
+                    if (!e.dead && Math.hypot(tongueX - e.x, tongueY - e.y) < 35) {
+                        // 吃到敌人！
+                        e.dead = true;
+                        this.yoshiMouthEnemy = e.constructor.name; // 记录敌人类型
+                        this.yoshiEggAmmo = 1; // 生成一个蛋
+                        score += 50;
+                        updateUI();
+                        AudioSys.playCoin();
+                        showHint('🥚 耀西吞下了敌人！');
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 耀西发射蛋
+    fireYoshiEgg() {
+        if (this.yoshiEggAmmo > 0 && this.yoshiMouthEnemy) {
+            this.yoshiEggAmmo--;
+            const direction = this.yoshiFacingRight ? 1 : -1;
+
+            // 创建蛋子弹
+            const egg = new Bullet(this.x + direction * 30, this.y - 10, direction, 'yoshiEgg');
+            egg.containsEnemy = this.yoshiMouthEnemy;
+            bullets.push(egg);
+
+            if (this.yoshiEggAmmo <= 0) {
+                this.yoshiMouthEnemy = null;
+            }
+
+            AudioSys.playFire();
+            return true;
+        }
+        return false;
     }
 
     // 玩家被击中
@@ -986,6 +1066,12 @@ class Player {
             return;
         }
 
+        // 耀西使用特殊恐龙绘制
+        if (char.id === 'yoshi') {
+            this.drawYoshiCharacter(s, char);
+            return;
+        }
+
         // 蛋仔派对风格的圆润蛋形身体
         const bodyGradient = ctx.createRadialGradient(-s*0.3, -s*0.4, 0, 0, 0, s*1.3);
         bodyGradient.addColorStop(0, char.secondaryColor || char.color);
@@ -1024,6 +1110,210 @@ class Player {
         ctx.beginPath();
         ctx.ellipse(-s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
         ctx.ellipse(s*0.35, s*1.2, s*0.22, s*0.12, 0, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    drawYoshiCharacter(s, char) {
+        // 耀西 - 绿色恐龙风格绘制
+        const bodyColor = '#32CD32';  // 亮绿色身体
+        const bellyColor = '#90EE90'; // 浅绿色肚子
+        const saddleColor = '#DC143C'; // 红色鞍
+        const saddleOutline = '#8B0000'; // 深红色鞍边
+
+        // ===== 尾巴 =====
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.9, s*0.3, s*0.3, s*0.15, -0.3, 0, Math.PI*2);
+        ctx.fill();
+        // 尾巴尖刺
+        ctx.fillStyle = '#228B22';
+        ctx.beginPath();
+        ctx.moveTo(-s*1.15, s*0.25);
+        ctx.lineTo(-s*1.3, s*0.15);
+        ctx.lineTo(-s*1.25, s*0.35);
+        ctx.fill();
+
+        // ===== 身体 =====
+        // 主体（圆润的蛋形）
+        const bodyGradient = ctx.createRadialGradient(-s*0.2, -s*0.3, 0, 0, s*0.2, s*1.1);
+        bodyGradient.addColorStop(0, bellyColor);
+        bodyGradient.addColorStop(0.6, bodyColor);
+        bodyGradient.addColorStop(1, '#228B22');
+
+        ctx.fillStyle = bodyGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, s*0.2, s*0.9, s*1.0, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 白色肚子区域
+        ctx.fillStyle = '#F0FFF0';
+        ctx.beginPath();
+        ctx.ellipse(0, s*0.3, s*0.5, s*0.6, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 红色鞍 =====
+        ctx.fillStyle = saddleColor;
+        ctx.beginPath();
+        ctx.ellipse(0, -s*0.1, s*0.55, s*0.4, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 鞍的边框
+        ctx.strokeStyle = saddleOutline;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        // 鞍的纹理（三个圆形突起）
+        ctx.fillStyle = '#FF6347';
+        ctx.beginPath();
+        ctx.arc(-s*0.3, -s*0.15, s*0.12, 0, Math.PI*2);
+        ctx.arc(0, -s*0.25, s*0.12, 0, Math.PI*2);
+        ctx.arc(s*0.3, -s*0.15, s*0.12, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 脖子 =====
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.ellipse(s*0.4, -s*0.6, s*0.35, s*0.5, -0.3, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 头部 =====
+        // 头主体（圆形）
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.arc(s*0.6, -s*1.0, s*0.55, 0, Math.PI*2);
+        ctx.fill();
+
+        // 白色下巴
+        ctx.fillStyle = '#F0FFF0';
+        ctx.beginPath();
+        ctx.ellipse(s*0.65, -s*0.75, s*0.35, s*0.25, 0.2, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 眼睛 =====
+        // 眼白（大而圆）
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(s*0.45, -s*1.15, s*0.22, 0, Math.PI*2);
+        ctx.arc(s*0.75, -s*1.15, s*0.22, 0, Math.PI*2);
+        ctx.fill();
+
+        // 黑色瞳孔（看向玩家移动方向）
+        ctx.fillStyle = 'black';
+        const lookDir = this.vx >= 0 ? 1 : -1;
+        ctx.beginPath();
+        ctx.arc(s*0.45 + lookDir*s*0.05, -s*1.15, s*0.1, 0, Math.PI*2);
+        ctx.arc(s*0.75 + lookDir*s*0.05, -s*1.15, s*0.1, 0, Math.PI*2);
+        ctx.fill();
+
+        // 眼睛高光
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(s*0.42 + lookDir*s*0.05, -s*1.2, s*0.04, 0, Math.PI*2);
+        ctx.arc(s*0.72 + lookDir*s*0.05, -s*1.2, s*0.04, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 鼻子 =====
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.ellipse(s*1.0, -s*0.95, s*0.25, s*0.2, 0.3, 0, Math.PI*2);
+        ctx.fill();
+
+        // 鼻孔
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.arc(s*1.05, -s*0.98, s*0.04, 0, Math.PI*2);
+        ctx.arc(s*1.12, -s*0.95, s*0.04, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 舌头 =====
+        if (this.yoshiTongueOut && this.yoshiTongueLength > 0) {
+            // 舌头伸出状态
+            const tongueDir = this.yoshiFacingRight ? 1 : -1;
+            const startX = s * 0.9;
+            const startY = -s * 0.85;
+            const endX = startX + tongueDir * this.yoshiTongueLength * (s / 30);
+            const endY = startY;
+
+            // 舌头主体（粉色长条）
+            ctx.fillStyle = '#FF69B4';
+            ctx.beginPath();
+            ctx.ellipse((startX + endX) / 2, startY, Math.abs(endX - startX) / 2, s * 0.12, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 舌头尖端（圆形）
+            ctx.fillStyle = '#FF1493';
+            ctx.beginPath();
+            ctx.arc(endX, endY, s * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 舌头上的粘液光泽
+            ctx.fillStyle = '#FFB6C1';
+            ctx.beginPath();
+            ctx.ellipse((startX + endX) / 2, startY - s * 0.04, Math.abs(endX - startX) / 2.5, s * 0.04, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 如果嘴里有敌人，在舌尖绘制一个蛋壳包裹的轮廓
+            if (this.yoshiMouthEnemy) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.beginPath();
+                ctx.arc(endX, endY, s * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        } else {
+            // 舌头收在嘴里（默认状态）
+            ctx.fillStyle = '#FF69B4';
+            ctx.beginPath();
+            ctx.ellipse(s*0.95, -s*0.82, s*0.15, s*0.08, 0.3, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // ===== 背刺 =====
+        ctx.fillStyle = '#228B22';
+        for (let i = 0; i < 3; i++) {
+            const spikeX = -s*0.3 + i * s*0.3;
+            ctx.beginPath();
+            ctx.moveTo(spikeX, -s*0.5);
+            ctx.lineTo(spikeX - s*0.1, -s*0.75);
+            ctx.lineTo(spikeX + s*0.1, -s*0.75);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // ===== 大脚 =====
+ ctx.fillStyle = bodyColor;
+        // 左脚
+        ctx.beginPath();
+        ctx.ellipse(-s*0.4, s*1.15, s*0.3, s*0.18, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 左脚趾甲
+        ctx.fillStyle = '#F0FFF0';
+        ctx.beginPath();
+        ctx.arc(-s*0.55, s*1.1, s*0.06, 0, Math.PI*2);
+        ctx.arc(-s*0.45, s*1.05, s*0.06, 0, Math.PI*2);
+        ctx.arc(-s*0.35, s*1.05, s*0.06, 0, Math.PI*2);
+        ctx.fill();
+
+        // 右脚
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.ellipse(s*0.4, s*1.15, s*0.3, s*0.18, 0, 0, Math.PI*2);
+        ctx.fill();
+        // 右脚趾甲
+        ctx.fillStyle = '#F0FFF0';
+        ctx.beginPath();
+        ctx.arc(s*0.25, s*1.1, s*0.06, 0, Math.PI*2);
+        ctx.arc(s*0.35, s*1.05, s*0.06, 0, Math.PI*2);
+        ctx.arc(s*0.45, s*1.05, s*0.06, 0, Math.PI*2);
+        ctx.fill();
+
+        // ===== 小手 =====
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.ellipse(-s*0.5, s*0.1, s*0.15, s*0.1, -0.5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(s*0.2, s*0.0, s*0.15, s*0.1, 0.5, 0, Math.PI*2);
         ctx.fill();
     }
 
@@ -2511,6 +2801,8 @@ class Bullet {
                 this.r = 7; this.vx = direction * 8; this.damage = 1; this.poisonTick = 30; break;
             case 'rainbow':
                 this.r = 11; this.vx = direction * 9; this.damage = 1; this.splitCount = 0; break;
+            case 'yoshiEgg':
+                this.r = 14; this.vx = direction * 10; this.damage = 2; this.bounce = 0; break;
             default:
                 this.damage = 1;
         }
@@ -2559,7 +2851,21 @@ class Bullet {
         if (this.type === 'missile') {
             this.x += this.vx;
             this.y += this.vy;
-        } else {
+        }
+        // 耀西蛋：弹跳物理
+        else if (this.type === 'yoshiEgg') {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += 0.4; // 重力
+            // 地面弹跳
+            if (this.y > 440) {
+                this.y = 440;
+                this.vy *= -0.7; // 弹性碰撞
+                this.bounce++;
+                if (this.bounce > 3) this.dead = true; // 弹跳3次后消失
+            }
+        }
+        else {
             this.x += this.vx;
         }
         this.life--;
@@ -2811,6 +3117,40 @@ class Bullet {
                 ctx.beginPath(); ctx.arc(0, 0, this.r * 0.7, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = `hsl(${(hue+240)%360},100%,60%)`;
                 ctx.beginPath(); ctx.arc(0, 0, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
+                break;
+
+            case 'yoshiEgg':
+                // 耀西蛋 - 白色蛋壳带彩色圆点
+                ctx.shadowColor = '#FFFFFF';
+                ctx.shadowBlur = 10;
+                // 蛋壳主体（椭圆形）
+                ctx.fillStyle = '#F5F5DC';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.r * 1.1, this.r * 1.3, this.vx * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                // 蛋壳高光
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.beginPath();
+                ctx.ellipse(-this.r*0.3, -this.r*0.5, this.r*0.3, this.r*0.5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                // 彩色圆点（根据吃掉的敌人类型决定颜色）
+                const dotColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+                const dotColor = dotColors[Math.abs(Math.floor(this.x / 50)) % dotColors.length];
+                ctx.fillStyle = dotColor;
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2 + (this.x * 0.05);
+                    const dx = Math.cos(angle) * this.r * 0.5;
+                    const dy = Math.sin(angle) * this.r * 0.6;
+                    ctx.beginPath();
+                    ctx.arc(dx, dy, this.r * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                // 蛋壳边框
+                ctx.strokeStyle = '#DDD';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.r * 1.1, this.r * 1.3, this.vx * 0.05, 0, Math.PI * 2);
+                ctx.stroke();
                 break;
 
             default:
@@ -5045,6 +5385,21 @@ function updateUI() {
 // 发射炮弹函数
 function fireBullet() {
     if (state !== 'play' || gameMode !== 'platformer' || !player) return;
+
+    // 耀西特殊攻击：优先发射蛋
+    if (selectedChar?.id === 'yoshi') {
+        if (player.fireYoshiEgg()) {
+            return; // 成功发射蛋，直接返回
+        }
+        // 没有蛋时，伸出舌头吃敌人
+        if (!player.yoshiTongueOut) {
+            player.yoshiTongueOut = true;
+            player.yoshiTongueTimer = 0;
+            AudioSys.playFire();
+            return;
+        }
+        return; // 舌头伸出中，不能连续吐舌头
+    }
 
     const now = Date.now();
     if (now - lastFireTime < FIRE_COOLDOWN) return; // 冷却中
