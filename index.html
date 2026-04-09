@@ -3910,25 +3910,22 @@ function generateUnderground() {
         undergroundEnemies.push(new BirdEnemy(i, 200, 80));
     }
 
-    // 地下机关（火焰陷阱）
-    for (let i = 600; i < ugLength - 200; i += 800) {
+    // 地下机关（火焰陷阱）- 间距加大，难度降低
+    for (let i = 800; i < ugLength - 300; i += 1400) {
         undergroundTraps.push(new FireTrap(i, 430));
     }
 
-    // 落石机关（从天花板随机掉落）
-    undergroundTraps.push(new FallingRock(500, 120));   // 2秒后掉落
-    undergroundTraps.push(new FallingRock(900, 240));   // 4秒后掉落
-    undergroundTraps.push(new FallingRock(1300, 180));  // 3秒后掉落
-    undergroundTraps.push(new FallingRock(1700, 300));  // 5秒后掉落
-    undergroundTraps.push(new FallingRock(2100, 150));  // 2.5秒后掉落
-    undergroundTraps.push(new FallingRock(2500, 360));  // 6秒后掉落
+    // 落石机关（从天花板随机掉落）- 间距加大，与前序机关错开
+    undergroundTraps.push(new FallingRock(600, 120));   // 第1个落石
+    undergroundTraps.push(new FallingRock(1200, 240));  // 第2个落石
+    undergroundTraps.push(new FallingRock(2000, 180));  // 第3个落石
+    undergroundTraps.push(new FallingRock(2600, 300));  // 第4个落石
 
-    // 闸门机关（周期性升降）
-    undergroundTraps.push(new Gate(700, 330, 120, 180));   // 3秒周期
-    undergroundTraps.push(new Gate(1100, 330, 120, 240));  // 4秒周期
-    undergroundTraps.push(new Gate(1500, 330, 100, 150));  // 2.5秒周期
-    undergroundTraps.push(new Gate(1900, 330, 120, 200));  // 3.3秒周期
-    undergroundTraps.push(new Gate(2300, 330, 140, 180));  // 3秒周期
+    // 闸门机关（周期性升降）- 间距加大到600-800，与火焰错开
+    undergroundTraps.push(new Gate(500, 330, 120, 200));   // 第1个闸门（慢速）
+    undergroundTraps.push(new Gate(1100, 330, 120, 280));  // 第2个闸门（更慢）
+    undergroundTraps.push(new Gate(1800, 330, 120, 220));  // 第3个闸门
+    undergroundTraps.push(new Gate(2400, 330, 120, 260));  // 第4个闸门
 
     // 出口管道（在地下关卡末尾）
     undergroundPipes.push(new Pipe(ugLength - 150, 380, 70, 'surface'));
