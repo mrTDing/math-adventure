@@ -2996,6 +2996,10 @@ class Bullet {
         ctx.save();
         ctx.translate(this.x - cam, this.y);
 
+        // 根据子弹速度方向旋转，让子弹沿着飞行方向显示
+        const angle = Math.atan2(this.vy, this.vx);
+        ctx.rotate(angle);
+
         // 根据子弹类型绘制不同外观
         switch(this.type) {
             case 'electric':
@@ -3282,6 +3286,10 @@ class Enemy {
         }
 
         this.x += this.speed * this.dir;
+
+        // 敌人贴地移动（同步y坐标到地面高度）
+        this.y = getGroundY(this.x) - 15;
+
         if (this.x > this.startX + this.patrolDist || this.x < this.startX - this.patrolDist) {
             this.dir *= -1;
         }
