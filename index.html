@@ -3289,53 +3289,62 @@ class Enemy {
     }
     draw() {
         if (this.dead) return;
-        ctx.save(); ctx.translate(this.x - cam, this.y);
+        ctx.save();
+
+        // 获取地面角度，让敌人贴地倾斜（冒险岛风格）
+        const groundAngle = getGroundAngle(this.x);
+        const groundY = getGroundY(this.x);
+
+        ctx.translate(this.x - cam, groundY);
+        ctx.rotate(groundAngle); // 根据地面的角度旋转
+
         if (this.hitFlash > 0) ctx.globalAlpha = 0.5;
 
+        // 敌人站在地面上（y=0是地面，向上绘制）
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(-15, -15, 30, 30);
+        ctx.fillRect(-15, -30, 30, 30);
 
         ctx.fillStyle = '#654321';
         for (let i = -12; i <= 12; i += 8) {
             ctx.beginPath();
-            ctx.moveTo(i, -15); ctx.lineTo(i + 4, -22); ctx.lineTo(i + 8, -15);
+            ctx.moveTo(i, -30); ctx.lineTo(i + 4, -37); ctx.lineTo(i + 8, -30);
             ctx.fill();
         }
 
         ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(-6, -5, 5, 0, Math.PI*2); ctx.arc(6, -5, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-6, -20, 5, 0, Math.PI*2); ctx.arc(6, -20, 5, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = 'red';
-        ctx.beginPath(); ctx.arc(-6, -5, 2, 0, Math.PI*2); ctx.arc(6, -5, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-6, -20, 2, 0, Math.PI*2); ctx.arc(6, -20, 2, 0, Math.PI*2); ctx.fill();
 
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(-12, 15, 8, 8);
-        ctx.fillRect(4, 15, 8, 8);
+        ctx.fillRect(-12, 0, 8, 8);
+        ctx.fillRect(4, 0, 8, 8);
 
         // 冻结特效
         if (this.freezeTime > 0) {
             ctx.strokeStyle = '#87CEEB';
             ctx.lineWidth = 3;
-            ctx.strokeRect(-17, -17, 34, 34);
+            ctx.strokeRect(-17, -32, 34, 34);
             ctx.fillStyle = 'rgba(135,206,235,0.3)';
-            ctx.fillRect(-17, -17, 34, 34);
+            ctx.fillRect(-17, -32, 34, 34);
         }
 
         // 毒液特效
         if (this.poisonTimer > 0 && this.poisonTimer % 10 < 5) {
             ctx.fillStyle = '#32CD32';
-            ctx.beginPath(); ctx.arc(-10, -20, 4, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(8, -10, 3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(0, 15, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-10, -35, 4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8, -25, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
         }
 
         ctx.globalAlpha = 1;
         ctx.fillStyle = 'red';
-        ctx.fillRect(-15, -28, 30, 6);
+        ctx.fillRect(-15, -43, 30, 6);
         ctx.fillStyle = '#0f0';
-        ctx.fillRect(-15, -28, 30 * (this.hp / 5), 6);
+        ctx.fillRect(-15, -43, 30 * (this.hp / 5), 6);
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
-        ctx.strokeRect(-15, -28, 30, 6);
+        ctx.strokeRect(-15, -43, 30, 6);
         ctx.restore();
     }
     hit() {
@@ -4295,19 +4304,32 @@ let enemies = [];
 let terrainPoints = []; // 地形高度点数组 [x, y]
 let terrainSegments = []; // 地形线段数组，用于碰撞检测
 
-// 生成起伏地形（参考冒险岛风格）
+// 生成起伏地形（冒险岛风格：波段起伏，有平地有起伏）
 function generateTerrain(levelLength, pitList, seed = 1) {
     const points = [];
     const segments = [];
     const baseY = 450;
-    const amplitude = 40; // 起伏幅度
-    const frequency = 0.003; // 起伏频率
+    const amplitude = 50; // 起伏幅度
 
     // 按x坐标排序坑洞
     const sortedPits = [...pitList].sort((a, b) => a.x - b.x);
 
-    let currentX = 0;
-    let pitIndex = 0;
+    // 定义地形波段：平地段和起伏段交替
+    const sections = [];
+    let sectionX = 0;
+    let sectionType = 0; // 0=平地, 1=起伏
+
+    while (sectionX < levelLength) {
+        const sectionLength = 800 + Math.random() * 1200; // 每段800-2000像素
+        sections.push({
+            start: sectionX,
+            end: Math.min(sectionX + sectionLength, levelLength),
+            type: sectionType,
+            seed: Math.random() * 100
+        });
+        sectionX += sectionLength;
+        sectionType = 1 - sectionType; // 交替切换
+    }
 
     // 生成地形点（每10像素一个点）
     for (let x = 0; x <= levelLength; x += 10) {
@@ -4323,23 +4345,33 @@ function generateTerrain(levelLength, pitList, seed = 1) {
         }
 
         if (!inPit) {
-            // 使用多层正弦波创建自然起伏
-            const wave1 = Math.sin(x * frequency * seed) * amplitude;
-            const wave2 = Math.sin(x * frequency * 2.3 * seed) * (amplitude * 0.5);
-            const wave3 = Math.sin(x * frequency * 0.7 * seed) * (amplitude * 0.3);
+            // 找到当前x属于哪个段落
+            let inSection = null;
+            for (const sec of sections) {
+                if (x >= sec.start && x < sec.end) {
+                    inSection = sec;
+                    break;
+                }
+            }
 
-            // 在某些区域创建小山坡
-            let hill = 0;
-            if (x > 1000 && x < 2000) hill = -Math.sin((x - 1000) / 1000 * Math.PI) * 30;
-            if (x > 5000 && x < 6000) hill = -Math.sin((x - 5000) / 1000 * Math.PI) * 40;
-
-            y = baseY + wave1 + wave2 + wave3 + hill;
+            if (inSection && inSection.type === 1) {
+                // 起伏段：使用正弦波
+                const localX = x - inSection.start;
+                const progress = localX / (inSection.end - inSection.start);
+                const wave = Math.sin(progress * Math.PI * 2 + inSection.seed) * amplitude;
+                // 添加一些小的波动
+                const smallWave = Math.sin(x * 0.02) * 10;
+                y = baseY + wave + smallWave;
+            } else {
+                // 平地段：固定高度，添加微小波动让地面更自然
+                y = baseY + Math.sin(x * 0.01) * 2;
+            }
 
             points.push({ x, y });
         } else {
             // 坑洞位置不生成地形点
             if (points.length > 0 && points[points.length - 1].y !== null) {
-                points.push({ x, y: null }); // 标记坑洞边界
+                points.push({ x, y: null });
             }
         }
     }
@@ -6451,8 +6483,17 @@ function fireBullet() {
 
     // 获取当前地面角度（冒险岛风格：子弹沿地形角度发射）
     const groundAngle = getGroundAngle(player.x);
-    // 限制最大发射角度，避免子弹太陡
-    const clampedAngle = Math.max(-0.3, Math.min(0.3, groundAngle));
+    // 优化：平地和小坡使用地形角度，陡坡时给子弹一点向上补偿，确保能打到下坡的敌人
+    let shootAngle = groundAngle;
+    if (groundAngle > 0.15) {
+        // 下坡太陡，减少下倾角度，让子弹更平
+        shootAngle = groundAngle * 0.5;
+    } else if (groundAngle < -0.15) {
+        // 上坡太陡，减少上倾角度
+        shootAngle = groundAngle * 0.5;
+    }
+    // 限制最大发射角度
+    const clampedAngle = Math.max(-0.25, Math.min(0.25, shootAngle));
 
     // 根据火力模式发射不同类型的子弹
     switch(playerFireMode) {
