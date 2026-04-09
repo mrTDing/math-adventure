@@ -808,7 +808,7 @@ class Player {
             this.yoshiEggAmmo = 0;
 
             AudioSys.playCoin();
-            showHint('🥚 耀西生了一个蛋！');
+            // 只播放音效和动画，不显示提示
             return true;
         }
         return false;
@@ -3865,6 +3865,21 @@ function generateUnderground() {
         undergroundTraps.push(new FireTrap(i, 430));
     }
 
+    // 落石机关（从天花板随机掉落）
+    undergroundTraps.push(new FallingRock(500, 120));   // 2秒后掉落
+    undergroundTraps.push(new FallingRock(900, 240));   // 4秒后掉落
+    undergroundTraps.push(new FallingRock(1300, 180));  // 3秒后掉落
+    undergroundTraps.push(new FallingRock(1700, 300));  // 5秒后掉落
+    undergroundTraps.push(new FallingRock(2100, 150));  // 2.5秒后掉落
+    undergroundTraps.push(new FallingRock(2500, 360));  // 6秒后掉落
+
+    // 闸门机关（周期性升降）
+    undergroundTraps.push(new Gate(700, 330, 120, 180));   // 3秒周期
+    undergroundTraps.push(new Gate(1100, 330, 120, 240));  // 4秒周期
+    undergroundTraps.push(new Gate(1500, 330, 100, 150));  // 2.5秒周期
+    undergroundTraps.push(new Gate(1900, 330, 120, 200));  // 3.3秒周期
+    undergroundTraps.push(new Gate(2300, 330, 140, 180));  // 3秒周期
+
     // 出口管道（在地下关卡末尾）
     undergroundPipes.push(new Pipe(ugLength - 150, 380, 70, 'surface'));
 
@@ -3945,38 +3960,243 @@ class FireTrap {
     }
 
     draw() {
-        // 陷阱底座
-        ctx.fillStyle = '#8B4513';
+        // 陷阱底座（火山口样式）
+        ctx.fillStyle = '#4a2c2a';
         ctx.fillRect(this.x - cam, this.y, this.width, 20);
+        // 底座边缘
+        ctx.fillStyle = '#6b4423';
+        ctx.fillRect(this.x - cam - 5, this.y, this.width + 10, 8);
 
-        // 火焰
+        // 使用 🔥 emoji 绘制火焰
         if (this.active) {
-            const flicker = Math.random() * 10;
-            ctx.fillStyle = '#FF4500';
-            ctx.beginPath();
-            ctx.moveTo(this.x - cam, this.y);
-            ctx.lineTo(this.x - cam + 10, this.y - this.fireHeight + flicker);
-            ctx.lineTo(this.x - cam + 20, this.y - this.fireHeight * 0.7 - flicker);
-            ctx.lineTo(this.x - cam + 30, this.y - this.fireHeight + flicker);
-            ctx.lineTo(this.x - cam + this.width, this.y);
-            ctx.closePath();
-            ctx.fill();
-
-            // 火焰内核
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.moveTo(this.x - cam + 5, this.y);
-            ctx.lineTo(this.x - cam + 15, this.y - this.fireHeight * 0.6);
-            ctx.lineTo(this.x - cam + 25, this.y);
-            ctx.closePath();
-            ctx.fill();
+            ctx.save();
+            ctx.font = '40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            // 火焰上下跳动动画
+            const bounce = Math.sin(Date.now() / 100) * 5;
+            ctx.fillText('🔥', this.x - cam + this.width/2, this.y - 10 + bounce);
+            ctx.restore();
         } else {
-            // 安全状态显示
-            ctx.fillStyle = '#32CD32';
+            // 安全状态显示（灰烬或暗色）
+            ctx.fillStyle = '#555';
             ctx.beginPath();
-            ctx.arc(this.x - cam + this.width/2, this.y + 10, 5, 0, Math.PI*2);
+            ctx.arc(this.x - cam + this.width/2, this.y + 10, 4, 0, Math.PI*2);
+            ctx.fill();
+            // 余烬微光
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.arc(this.x - cam + this.width/2 - 2, this.y + 8, 2, 0, Math.PI*2);
             ctx.fill();
         }
+    }
+}
+
+// ==================== 落石机关类（从天花板掉落）====================
+class FallingRock {
+    constructor(x, delay = 0) {
+        this.x = x;
+        this.y = 100;  // 从天花板附近开始
+        this.r = 25;
+        this.vy = 0;
+        this.vx = 0;
+        this.delay = delay;  // 延迟掉落（帧数）
+        this.active = false;
+        this.landed = false;
+        this.warningTime = 60;  // 预警时间（1秒）
+        this.flash = 0;
+    }
+
+    update() {
+        if (!this.active) {
+            this.delay--;
+            if (this.delay <= 0) {
+                this.active = true;
+            }
+            return;
+        }
+
+        if (this.landed) return;
+
+        // 预警闪烁
+        if (this.warningTime > 0) {
+            this.warningTime--;
+            this.flash = this.warningTime % 10 < 5 ? 1 : 0;
+            return;
+        }
+
+        // 重力下落
+        this.vy += 0.5;
+        this.y += this.vy;
+
+        // 落地检测
+        if (this.y > 440) {
+            this.y = 440;
+            this.vy = 0;
+            this.landed = true;
+        }
+
+        // 玩家碰撞检测
+        if (player && !player.invincible) {
+            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            if (dist < this.r + player.r) {
+                player.hit();
+            }
+        }
+    }
+
+    draw() {
+        const screenX = this.x - cam;
+
+        // 预警闪烁（掉落前）
+        if (!this.landed && this.active && this.warningTime > 0) {
+            if (this.flash) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.beginPath();
+                ctx.arc(screenX, 100, this.r, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 警告标记
+                ctx.fillStyle = '#FF0000';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠️', screenX, 80);
+            }
+            return;
+        }
+
+        // 绘制石头
+        if (!this.active) return;
+
+        ctx.save();
+        ctx.translate(screenX, this.y);
+        ctx.rotate(this.y * 0.05);  // 旋转效果
+
+        // 石头主体
+        const gradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, this.r);
+        gradient.addColorStop(0, '#A0A0A0');
+        gradient.addColorStop(0.7, '#696969');
+        gradient.addColorStop(1, '#2F4F4F');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        // 不规则形状
+        ctx.moveTo(-this.r, 0);
+        ctx.lineTo(-this.r * 0.6, -this.r * 0.8);
+        ctx.lineTo(0, -this.r);
+        ctx.lineTo(this.r * 0.7, -this.r * 0.7);
+        ctx.lineTo(this.r, 0);
+        ctx.lineTo(this.r * 0.5, this.r * 0.8);
+        ctx.lineTo(-this.r * 0.4, this.r * 0.9);
+        ctx.closePath();
+        ctx.fill();
+
+        // 石头纹理
+        ctx.strokeStyle = '#404040';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-10, -5);
+        ctx.lineTo(5, 5);
+        ctx.lineTo(8, -8);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+// ==================== 闸门机关类（升降门）====================
+class Gate {
+    constructor(x, y, height = 120, openInterval = 180) {
+        this.x = x;
+        this.y = y || 330;  // 默认位置
+        this.width = 40;
+        this.height = height;
+        this.openInterval = openInterval;  // 开关周期（帧数）
+        this.timer = 0;
+        this.isOpen = false;  // 是否开启（开启时可以通过）
+        this.openHeight = 0;  // 当前开启高度
+        this.maxOpenHeight = 100;  // 最大开启高度
+    }
+
+    update() {
+        this.timer++;
+
+        // 周期性开关
+        const cycle = this.timer % this.openInterval;
+        const shouldOpen = cycle < this.openInterval / 2;
+
+        // 平滑过渡
+        if (shouldOpen) {
+            this.openHeight += (this.maxOpenHeight - this.openHeight) * 0.1;
+            this.isOpen = this.openHeight > this.maxOpenHeight * 0.8;
+        } else {
+            this.openHeight += (0 - this.openHeight) * 0.1;
+            this.isOpen = this.openHeight < this.maxOpenHeight * 0.2;
+        }
+
+        // 玩家碰撞检测（闸门关闭时）
+        if (!this.isOpen && player && !player.invincible) {
+            const px = player.x, py = player.y, pr = player.r;
+            const gateTop = this.y - this.openHeight;
+
+            // 检测玩家是否撞到闸门
+            if (px + pr > this.x && px - pr < this.x + this.width &&
+                py + pr > gateTop && py - pr < this.y + this.height) {
+
+                // 从上方落下时，被阻挡
+                if (player.vy > 0 && py - pr < gateTop + 20) {
+                    player.y = gateTop - pr;
+                    player.vy = 0;
+                    player.g = true;
+                    player.j = 0;
+                } else {
+                    // 侧面碰撞，造成伤害
+                    player.hit();
+                }
+            }
+        }
+    }
+
+    draw() {
+        const screenX = this.x - cam;
+        const gateTop = this.y - this.openHeight;
+
+        // 闸门柱子（固定部分）
+        ctx.fillStyle = '#4a4a4a';
+        ctx.fillRect(screenX - 5, this.y, 5, this.height);
+        ctx.fillRect(screenX + this.width, this.y, 5, this.height);
+
+        // 闸门本体（升降部分）
+        if (this.openHeight < this.maxOpenHeight * 0.95) {
+            const gateGradient = ctx.createLinearGradient(screenX, gateTop, screenX + this.width, gateTop);
+            gateGradient.addColorStop(0, '#8B4513');
+            gateGradient.addColorStop(0.5, '#A0522D');
+            gateGradient.addColorStop(1, '#8B4513');
+
+            ctx.fillStyle = gateGradient;
+            ctx.fillRect(screenX, gateTop, this.width, this.height);
+
+            // 闸门纹理（横向条纹）
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            for (let i = 20; i < this.height; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(screenX, gateTop + i);
+                ctx.lineTo(screenX + this.width, gateTop + i);
+                ctx.stroke();
+            }
+
+            // 边框
+            ctx.strokeStyle = '#4a2c2a';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(screenX, gateTop, this.width, this.height);
+        }
+
+        // 状态指示灯
+        ctx.fillStyle = this.isOpen ? '#00FF00' : '#FF0000';
+        ctx.beginPath();
+        ctx.arc(screenX + this.width/2, this.y - 15, 5, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
@@ -4031,6 +4251,31 @@ class SpecialTransformBox {
 
 // ==================== 横版闯关初始化（加长版）====================
 let enemies = [];
+
+// 根据坑洞创建分段地面（坑洞区域没有地面）
+function createGroundWithPits(levelLength, pitList) {
+    const groundSegments = [];
+    let currentX = 0;
+
+    // 按x坐标排序坑洞
+    const sortedPits = [...pitList].sort((a, b) => a.x - b.x);
+
+    for (const pit of sortedPits) {
+        // 坑洞前的地面
+        if (pit.x > currentX + 10) {
+            groundSegments.push([currentX, 450, pit.x - currentX, 50]);
+        }
+        currentX = pit.x + pit.width;
+    }
+
+    // 最后一个坑洞后的地面
+    if (currentX < levelLength) {
+        groundSegments.push([currentX, 450, levelLength - currentX, 50]);
+    }
+
+    return groundSegments.length > 0 ? groundSegments : [[0, 450, levelLength, 50]];
+}
+
 function initPlatformer() {
     player = new Player(); cam = 0;
     blocks = []; coins = []; questions = []; items = []; enemies = []; pits = []; stones = []; clouds = [];
@@ -4038,7 +4283,14 @@ function initPlatformer() {
     // 新关卡长度：15000 / 20000 / 25000
     if (level === 1) {
         const levelLength = 15000;
-        blocks = [[0, 450, levelLength, 50]];
+
+        // 先定义坑洞
+        pits.push(new Pit(2500, 80));
+        pits.push(new Pit(8000, 100));
+        pits.push(new Pit(5500, 250));
+
+        // 根据坑洞创建分段地面
+        blocks = createGroundWithPits(levelLength, pits);
 
         // 更多平台 - 间隔更小
         for (let i = 200; i < levelLength - 500; i += 200) {
@@ -4068,13 +4320,6 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
         }
 
-        // 坑洞陷阱（第一关2个普通 + 1个大坑洞+云朵组合）
-        pits.push(new Pit(2500, 80));
-        pits.push(new Pit(8000, 100));
-
-        // 大坑洞+云朵组合（需要踩着云朵跳过去）
-        // 大坑洞位置5500，宽度250（需要云朵帮助才能过）
-        pits.push(new Pit(5500, 250));
         // 在坑洞中间放置浮动云朵
         clouds.push(new Cloud(5500 + 125, 320, 140));  // 中央大云朵
         clouds.push(new Cloud(5500 + 60, 280, 100));   // 左侧小云朵（较高）
@@ -4091,7 +4336,16 @@ function initPlatformer() {
 
     } else if (level === 2) {
         const levelLength = 20000;
-        blocks = [[0, 450, levelLength, 50]];
+
+        // 先定义坑洞
+        pits.push(new Pit(2000, 90));
+        pits.push(new Pit(5500, 80));
+        pits.push(new Pit(11000, 100));
+        pits.push(new Pit(16000, 90));
+        pits.push(new Pit(8500, 300));  // 超大坑洞
+
+        // 根据坑洞创建分段地面
+        blocks = createGroundWithPits(levelLength, pits);
 
         for (let i = 180; i < levelLength - 500; i += 180) {
             const h = 220 + Math.random() * 180;
@@ -4117,14 +4371,7 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
         }
 
-        // 坑洞陷阱（第二关4个普通 + 1个大坑洞+云朵组合）
-        pits.push(new Pit(2000, 90));
-        pits.push(new Pit(5500, 80));
-        pits.push(new Pit(11000, 100));
-        pits.push(new Pit(16000, 90));
-
         // 大坑洞+云朵组合（更难，需要连续跳跃）
-        pits.push(new Pit(8500, 300));  // 超大坑洞
         clouds.push(new Cloud(8500 + 80, 340, 120));   // 起始云朵
         clouds.push(new Cloud(8500 + 150, 290, 100));  // 中间高云朵
         clouds.push(new Cloud(8500 + 220, 340, 120));  // 终点云朵
@@ -4142,7 +4389,19 @@ function initPlatformer() {
 
     } else {
         const levelLength = 25000;
-        blocks = [[0, 450, levelLength, 50]];
+
+        // 先定义坑洞
+        pits.push(new Pit(1800, 100));
+        pits.push(new Pit(4500, 90));
+        pits.push(new Pit(9000, 110));
+        pits.push(new Pit(13000, 80));
+        pits.push(new Pit(17000, 100));
+        pits.push(new Pit(21000, 90));
+        pits.push(new Pit(3000, 280));  // 大坑洞1
+        pits.push(new Pit(11500, 350)); // 大坑洞2
+
+        // 根据坑洞创建分段地面
+        blocks = createGroundWithPits(levelLength, pits);
 
         for (let i = 150; i < levelLength - 500; i += 150) {
             const h = 200 + Math.random() * 200;
@@ -4168,21 +4427,11 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
         }
 
-        // 坑洞陷阱（第三关6个普通 + 2个大坑洞+云朵组合）
-        pits.push(new Pit(1800, 100));
-        pits.push(new Pit(4500, 90));
-        pits.push(new Pit(9000, 110));
-        pits.push(new Pit(13000, 80));
-        pits.push(new Pit(17000, 100));
-        pits.push(new Pit(21000, 90));
-
         // 大坑洞+云朵组合1（中等难度）
-        pits.push(new Pit(3000, 280));
         clouds.push(new Cloud(3000 + 100, 330, 130));
         clouds.push(new Cloud(3000 + 180, 280, 110));
 
         // 大坑洞+云朵组合2（高难度，移动云朵）
-        pits.push(new Pit(11500, 350));
         clouds.push(new Cloud(11500 + 90, 360, 120));   // 起始（移动）
         clouds.push(new Cloud(11500 + 175, 300, 100));  // 中间高
         clouds.push(new Cloud(11500 + 260, 360, 120));  // 终点（移动）
