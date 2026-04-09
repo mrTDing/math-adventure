@@ -595,7 +595,7 @@ let totalBoxes = 0;
 
 // ==================== 横版闯关变量 ====================
 let player, blocks = [], coins = [], questions = [], flag, cam = 0;
-let items = [], bullets = [];
+let items = [], bullets = [], yoshiEggs = [];
 let lastFireTime = 0; // 上次发射时间
 const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
 let specialTransformBox = null; // 特殊变身箱子
@@ -774,25 +774,24 @@ class Player {
         }
     }
 
-    // 耀西发射蛋
-    fireYoshiEgg() {
-        if (this.yoshiEggAmmo > 0 && this.yoshiMouthEnemy) {
-            this.yoshiEggAmmo--;
-            const direction = this.yoshiFacingRight ? 1 : -1;
-
-            // 创建蛋子弹
-            const egg = new Bullet(this.x + direction * 30, this.y - 10, direction, 'yoshiEgg');
-            egg.containsEnemy = this.yoshiMouthEnemy;
-            bullets.push(egg);
-
-            if (this.yoshiEggAmmo <= 0) {
-                this.yoshiMouthEnemy = null;
-            }
-
-            AudioSys.playFire();
+    // 耀西生蛋（蛋会出现在身后地面上）
+    spawnYoshiEgg() {
+        if (this.yoshiMouthEnemy) {
+            const eggX = this.x - (this.yoshiFacingRight ? 40 : -40);
+            const egg = new YoshiEgg(eggX, this.y, this.yoshiMouthEnemy);
+            yoshiEggs.push(egg);
+            this.yoshiMouthEnemy = null;
+            this.yoshiEggAmmo = 0;
+            AudioSys.playCoin();
+            showHint('🥚 耀西生了一个蛋！');
             return true;
         }
         return false;
+    }
+
+    // 兼容旧代码
+    fireYoshiEgg() {
+        return this.spawnYoshiEgg();
     }
 
     // 玩家被击中
@@ -1145,11 +1144,15 @@ class Player {
         ctx.ellipse(0, s*0.2, s*0.9, s*1.0, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 白色肚子区域
-        ctx.fillStyle = '#F0FFF0';
+        // 白色肚子区域（实心填充+边框）
+        ctx.fillStyle = '#FFFFF0';
         ctx.beginPath();
         ctx.ellipse(0, s*0.3, s*0.5, s*0.6, 0, 0, Math.PI*2);
         ctx.fill();
+        // 肚子边框
+        ctx.strokeStyle = '#E8E8D0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
         // ===== 红色鞍 =====
         ctx.fillStyle = saddleColor;
@@ -3384,6 +3387,97 @@ class BirdEnemy {
     }
 }
 
+// ==================== 耀西蛋类（吃下怪物后产的蛋）====================
+class YoshiEgg {
+    constructor(x, y, enemyType) {
+        this.x = x;
+        this.y = y;
+        this.enemyType = enemyType;  // 存储吃掉的怪物类型
+        this.r = 14;
+        this.vy = -5;  // 初始向上弹出
+        this.vx = (Math.random() - 0.5) * 2;  // 轻微水平随机
+        this.life = 300;  // 5秒后消失
+        this.grounded = false;
+        this.bounce = 0;
+        this.squish = 1;  // 挤压效果
+    }
+
+    update() {
+        if (!this.grounded) {
+            this.vy += 0.4;  // 重力
+            this.y += this.vy;
+            this.x += this.vx;
+
+            // 地面碰撞
+            if (this.y > 440) {
+                this.y = 440;
+                this.vy *= -0.5;  // 弹跳并减速
+                this.vx *= 0.8;
+                this.bounce++;
+                this.squish = 0.7;  // 落地挤压
+                if (this.bounce > 2) {
+                    this.grounded = true;
+                    this.vy = 0;
+                    this.vx = 0;
+                }
+            }
+        } else {
+            this.squish += (1 - this.squish) * 0.1;  // 恢复形状
+        }
+
+        this.life--;
+    }
+
+    draw() {
+        if (this.life <= 0) return;
+
+        ctx.save();
+        ctx.translate(this.x - cam, this.y);
+        ctx.scale(this.squish, 2 - this.squish);  // 挤压拉伸效果
+
+        // 蛋主体 - 白色蛋壳
+        const gradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, this.r);
+        gradient.addColorStop(0, '#FFFFFF');
+        gradient.addColorStop(0.7, '#F0F0F0');
+        gradient.addColorStop(1, '#D0D0D0');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.r, this.r * 1.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 蛋壳斑点（根据怪物类型不同颜色）
+        const spotColors = {
+            'goomba': '#8B4513',
+            'koopa': '#228B22',
+            'default': '#FF6347'
+        };
+        ctx.fillStyle = spotColors[this.enemyType] || spotColors['default'];
+
+        // 绘制3个斑点
+        ctx.beginPath();
+        ctx.arc(-4, -5, 3, 0, Math.PI * 2);
+        ctx.arc(5, 2, 2.5, 0, Math.PI * 2);
+        ctx.arc(-2, 6, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 蛋的高光
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.ellipse(-4, -6, 3, 4, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 边框
+        ctx.strokeStyle = '#C0C0C0';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.r, this.r * 1.15, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
 // ==================== 坑洞类（地面陷阱）====================
 class Pit {
     constructor(x, width) {
@@ -3788,6 +3882,10 @@ function updatePlatformer(timestamp) {
     // 移除死亡炮弹
     bullets = bullets.filter(b => !b.dead);
 
+    // 更新耀西蛋
+    for (let egg of yoshiEggs) egg.update();
+    yoshiEggs = yoshiEggs.filter(egg => egg.life > 0);
+
     // 更新坑洞
     for (let p of pits) p.update();
 
@@ -3978,6 +4076,7 @@ function drawPlatformer() {
     for (let s of stones) s.draw();
 
     for (let b of bullets) b.draw();
+    for (let egg of yoshiEggs) egg.draw();
     for (let q of questions) q.draw();
 
     // 绘制特殊变身箱子
