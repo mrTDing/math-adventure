@@ -595,7 +595,7 @@ let totalBoxes = 0;
 
 // ==================== 横版闯关变量 ====================
 let player, blocks = [], coins = [], questions = [], flag, cam = 0;
-let items = [], bullets = [], pipes = [], savedState = null;
+let items = [], bullets = [], pipes = [], savedState = null, yoshiEggs = [];
 let lastFireTime = 0; // 上次发射时间
 const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
 let specialTransformBox = null; // 特殊变身箱子
@@ -796,22 +796,19 @@ class Player {
         }
     }
 
-    // 耀西发射蛋
-    fireYoshiEgg() {
-        if (this.yoshiEggAmmo > 0 && this.yoshiMouthEnemy) {
-            this.yoshiEggAmmo--;
-            const direction = this.yoshiFacingRight ? 1 : -1;
+    // 耀西生成蛋（蛋出现在身后，参考超级马里奥大电影）
+    spawnYoshiEgg() {
+        if (this.yoshiMouthEnemy) {
+            // 在耀西身后生成一个蛋
+            const eggX = this.x - (this.yoshiFacingRight ? 40 : -40);
+            const egg = new YoshiEgg(eggX, this.y, this.yoshiMouthEnemy);
+            yoshiEggs.push(egg);
 
-            // 创建蛋子弹
-            const egg = new Bullet(this.x + direction * 30, this.y - 10, direction, 'yoshiEgg');
-            egg.containsEnemy = this.yoshiMouthEnemy;
-            bullets.push(egg);
+            this.yoshiMouthEnemy = null;
+            this.yoshiEggAmmo = 0;
 
-            if (this.yoshiEggAmmo <= 0) {
-                this.yoshiMouthEnemy = null;
-            }
-
-            AudioSys.playFire();
+            AudioSys.playCoin();
+            showHint('🥚 耀西生了一个蛋！');
             return true;
         }
         return false;
@@ -1167,11 +1164,15 @@ class Player {
         ctx.ellipse(0, s*0.2, s*0.9, s*1.0, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 白色肚子区域
-        ctx.fillStyle = '#F0FFF0';
+        // 白色肚子区域（实心填充）
+        ctx.fillStyle = '#FFFFF0';
         ctx.beginPath();
         ctx.ellipse(0, s*0.3, s*0.5, s*0.6, 0, 0, Math.PI*2);
         ctx.fill();
+        // 肚子边框（让它更明显）
+        ctx.strokeStyle = '#E8E8D0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
         // ===== 红色鞍 =====
         ctx.fillStyle = saddleColor;
@@ -3406,6 +3407,89 @@ class BirdEnemy {
     }
 }
 
+// ==================== 耀西的蛋类（跟随在身后）====================
+class YoshiEgg {
+    constructor(x, y, enemyType) {
+        this.x = x;
+        this.y = y;
+        this.startY = y;
+        this.enemyType = enemyType;
+        this.r = 14;
+        this.bounce = 0;
+        this.vy = -5;  // 初始向上弹出
+        this.life = 300;  // 5秒后消失
+        this.grounded = false;
+    }
+
+    update() {
+        if (this.life <= 0) return;
+        this.life--;
+
+        // 重力效果
+        if (!this.grounded) {
+            this.vy += 0.4;
+            this.y += this.vy;
+
+            // 落地检测
+            if (this.y > 440) {
+                this.y = 440;
+                this.vy *= -0.5;  // 弹性反弹
+                this.bounce++;
+                if (this.bounce > 2) {
+                    this.grounded = true;
+                    this.vy = 0;
+                }
+            }
+        }
+    }
+
+    draw() {
+        if (this.life <= 0) return;
+
+        ctx.save();
+        ctx.translate(this.x - cam, this.y);
+
+        // 蛋壳主体（白色椭圆）
+        ctx.fillStyle = '#FFFFF0';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.r * 1.1, this.r * 1.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 蛋壳边框
+        ctx.strokeStyle = '#DDD';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 蛋壳上的斑点（根据敌人类型决定颜色）
+        const colors = {
+            'Enemy': '#FF6B6B',
+            'BirdEnemy': '#4ECDC4',
+            'BigEnemy': '#45B7D1',
+            'default': '#98D8C8'
+        };
+        const dotColor = colors[this.enemyType] || colors['default'];
+        ctx.fillStyle = dotColor;
+
+        // 几个圆点
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            const dx = Math.cos(angle) * this.r * 0.5;
+            const dy = Math.sin(angle) * this.r * 0.6;
+            ctx.beginPath();
+            ctx.arc(dx, dy, this.r * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 蛋壳高光
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.ellipse(-this.r*0.3, -this.r*0.5, this.r*0.3, this.r*0.5, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
 // ==================== 坑洞类（地面陷阱）====================
 class Pit {
     constructor(x, width) {
@@ -3639,8 +3723,14 @@ class Pipe {
 
         // 检测玩家是否按下了进入键（下键）
         if (this.enterCooldown === 0 && player && keys['ArrowDown']) {
-            const dist = Math.hypot(player.x - (this.x + this.width/2), player.y - this.y);
-            if (dist < 40 && player.g) {  // 站在管道上且在地面上
+            // 检查玩家是否在管道水平范围内
+            const pipeCenterX = this.x + this.width/2;
+            const xDist = Math.abs(player.x - pipeCenterX);
+            // 检查玩家是否在管道上方（站在管道上或附近地面）
+            const yDist = player.y - this.y;
+
+            // 玩家在管道中心附近（x方向），且在管道上方或附近（y方向）
+            if (xDist < 35 && yDist > -20 && yDist < 80) {
                 this.enterPipe();
             }
         }
@@ -4204,6 +4294,11 @@ function updatePlatformer(timestamp) {
     // 更新浮动云朵
     for (let c of clouds) c.update();
 
+    // 更新耀西的蛋
+    for (let egg of yoshiEggs) egg.update();
+    // 移除消失的蛋
+    yoshiEggs = yoshiEggs.filter(egg => egg.life > 0);
+
     // 更新管道（地下入口/出口）
     for (let p of pipes) p.update();
 
@@ -4432,6 +4527,9 @@ function drawPlatformer() {
 
     // 绘制滚动石头
     for (let s of stones) s.draw();
+
+    // 绘制耀西的蛋（在玩家身后）
+    for (let egg of yoshiEggs) egg.draw();
 
     // 绘制管道（地下入口）
     for (let p of pipes) p.draw();
@@ -5851,12 +5949,14 @@ function updateUI() {
 function fireBullet() {
     if (state !== 'play' || gameMode !== 'platformer' || !player) return;
 
-    // 耀西特殊攻击：优先发射蛋
+    // 耀西特殊能力：吐出蛋或伸出舌头
     if (selectedChar?.id === 'yoshi') {
-        if (player.fireYoshiEgg()) {
-            return; // 成功发射蛋，直接返回
+        // 如果嘴里有敌人，生成蛋
+        if (player.yoshiMouthEnemy) {
+            player.spawnYoshiEgg();
+            return;
         }
-        // 没有蛋时，伸出舌头吃敌人
+        // 没有敌人时，伸出舌头吃敌人
         if (!player.yoshiTongueOut) {
             player.yoshiTongueOut = true;
             player.yoshiTongueTimer = 0;
