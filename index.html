@@ -682,8 +682,17 @@ class Player {
         this.g = false;
 
         const px = this.x, py = this.y, pr = this.r;
+        // 检查是否在坑洞上
+        let inPit = false;
+        for (const pit of pits) {
+            if (px > pit.x && px < pit.x + pit.width) {
+                inPit = true;
+                break;
+            }
+        }
+
         // 起伏地形地面碰撞
-        if (!isInUnderground && terrainSegments.length > 0) {
+        if (!isInUnderground && terrainSegments.length > 0 && !inPit) {
             // 获取当前x位置的地面高度
             const groundY = getGroundY(this.x);
 
@@ -4425,51 +4434,34 @@ function getGroundAngle(x) {
     return 0;
 }
 
-// 根据坑洞创建分段地面（兼容旧代码，但现在使用地形系统）
+// 根据坑洞创建分段地面（水平地面）
 function createGroundWithPits(levelLength, pitList) {
-    // 生成起伏地形
+    // 生成水平地形数据
     const terrain = generateTerrain(levelLength, pitList, level);
     terrainPoints = terrain.points;
     terrainSegments = terrain.segments;
 
-    // 将地形转换为blocks格式（冒险岛风格：按地形点生成斜坡地面块）
+    // 生成水平地面blocks
     const groundSegments = [];
+    let currentX = 0;
 
     // 按x坐标排序坑洞
     const sortedPits = [...pitList].sort((a, b) => a.x - b.x);
 
-    // 将连续的地形点转换为地面块（每段10像素宽，高度根据地形点）
-    for (let i = 0; i < terrainPoints.length - 1; i++) {
-        const p1 = terrainPoints[i];
-        const p2 = terrainPoints[i + 1];
-
-        // 跳过坑洞区域（y为null）
-        if (p1.y === null || p2.y === null) continue;
-
-        // 检查这段是否在任何坑洞内
-        let inPit = false;
-        for (const pit of sortedPits) {
-            if (p1.x >= pit.x && p1.x <= pit.x + pit.width) {
-                inPit = true;
-                break;
-            }
+    for (const pit of sortedPits) {
+        // 坑洞前的地面（水平 y=450）
+        if (pit.x > currentX + 10) {
+            groundSegments.push([currentX, 450, pit.x - currentX, 50]);
         }
-        if (inPit) continue;
-
-        const x = p1.x;
-        const width = p2.x - p1.x;
-        const y = Math.min(p1.y, p2.y); // 使用较高的点作为y
-        const height = Math.abs(p2.y - p1.y) + 100; // 确保足够高以覆盖碰撞
-
-        groundSegments.push([x, y, width, height]);
+        currentX = pit.x + pit.width;
     }
 
-    // 如果没有生成任何段（可能全是坑洞），返回默认平地
-    if (groundSegments.length === 0) {
-        return [[0, 450, levelLength, 50]];
+    // 最后一个坑洞后的地面
+    if (currentX < levelLength) {
+        groundSegments.push([currentX, 450, levelLength - currentX, 50]);
     }
 
-    return groundSegments;
+    return groundSegments.length > 0 ? groundSegments : [[0, 450, levelLength, 50]];
 }
 
 function initPlatformer() {
