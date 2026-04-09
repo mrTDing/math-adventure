@@ -595,7 +595,7 @@ let totalBoxes = 0;
 
 // ==================== 横版闯关变量 ====================
 let player, blocks = [], coins = [], questions = [], flag, cam = 0;
-let items = [], bullets = [];
+let items = [], bullets = [], pipes = [], savedState = null;
 let lastFireTime = 0; // 上次发射时间
 const FIRE_COOLDOWN = 300; // 发射冷却时间（毫秒）
 let specialTransformBox = null; // 特殊变身箱子
@@ -682,6 +682,7 @@ class Player {
         this.g = false;
 
         const px = this.x, py = this.y, pr = this.r;
+        // 普通平台碰撞
         for (let i = 0; i < blocks.length; i++) {
             const p = blocks[i];
             if (px + pr > p[0] && px - pr < p[0] + p[2] && py + pr > p[1] && py - pr < p[1] + p[3]) {
@@ -690,6 +691,27 @@ class Player {
                     this.vy = 0;
                     this.g = true;
                     this.j = 0;
+                }
+            }
+        }
+
+        // 浮动云朵平台碰撞
+        for (let cloud of clouds) {
+            const bounds = cloud.getBounds();
+            // 只检测从上方落下
+            if (this.vy > 0 &&
+                px + pr > bounds.x && px - pr < bounds.x + bounds.width &&
+                py + pr >= bounds.y && py - pr < bounds.y + bounds.height) {
+                // 确保是从上方落下来的（前一帧在云朵上方）
+                if (py - pr - this.vy <= bounds.y) {
+                    this.y = bounds.y - pr;
+                    this.vy = 0;
+                    this.g = true;
+                    this.j = 0;
+                    // 站在移动云朵上要跟随移动
+                    if (cloud.moveRange > 0) {
+                        this.x += Math.cos(cloud.moveOffset) * cloud.moveRange * 0.02 * cloud.moveSpeed;
+                    }
                 }
             }
         }
@@ -3434,6 +3456,93 @@ class Pit {
     }
 }
 
+// ==================== 浮动云朵类（跳跃平台）====================
+class Cloud {
+    constructor(x, y, width) {
+        this.x = x;
+        this.y = y || 320;  // 默认高度
+        this.width = width || 120;
+        this.height = 25;
+        this.dead = false;
+        // 浮动动画
+        this.floatOffset = Math.random() * Math.PI * 2;
+        this.baseY = this.y;
+        // 水平移动（某些云朵会左右飘动）
+        this.moveRange = Math.random() > 0.5 ? 50 : 0;  // 50%概率会移动
+        this.moveSpeed = 0.5 + Math.random() * 0.5;
+        this.baseX = this.x;
+        this.moveOffset = Math.random() * Math.PI * 2;
+    }
+
+    update() {
+        // 垂直浮动动画
+        this.floatOffset += 0.03;
+        this.y = this.baseY + Math.sin(this.floatOffset) * 8;
+
+        // 水平移动动画（如果有）
+        if (this.moveRange > 0) {
+            this.moveOffset += this.moveSpeed * 0.02;
+            this.x = this.baseX + Math.sin(this.moveOffset) * this.moveRange;
+        }
+    }
+
+    draw() {
+        ctx.save();
+        const screenX = this.x - cam;
+
+        // 云朵主体（圆角长条形）
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        ctx.shadowBlur = 15;
+
+        // 云朵由多个椭圆组成
+        const drawCloudPuff = (px, py, r) => {
+            ctx.beginPath();
+            ctx.arc(px, py, r, 0, Math.PI * 2);
+            ctx.fill();
+        };
+
+        // 主平台（长条形）
+        ctx.fillStyle = '#F0F8FF';
+        ctx.beginPath();
+        ctx.roundRect(screenX - this.width/2, this.y, this.width, this.height, 12);
+        ctx.fill();
+
+        // 云朵装饰（几个圆泡泡）
+        ctx.fillStyle = '#FFFFFF';
+        drawCloudPuff(screenX - this.width/2 + 20, this.y - 5, 18);
+        drawCloudPuff(screenX - this.width/2 + 45, this.y - 12, 22);
+        drawCloudPuff(screenX + this.width/2 - 45, this.y - 12, 22);
+        drawCloudPuff(screenX + this.width/2 - 20, this.y - 5, 18);
+        drawCloudPuff(screenX, this.y - 15, 25);
+
+        // 云朵底部阴影
+        ctx.fillStyle = '#E6E6FA';
+        ctx.beginPath();
+        ctx.roundRect(screenX - this.width/2, this.y + 15, this.width, 10, 8);
+        ctx.fill();
+
+        // 平台顶部高光
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.roundRect(screenX - this.width/2 + 5, this.y + 2, this.width - 10, 4, 4);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
+    // 获取平台的碰撞盒（用于玩家跳跃）
+    getBounds() {
+        return {
+            x: this.x - this.width/2,
+            y: this.y,
+            width: this.width,
+            height: this.height
+        };
+    }
+}
+
 // ==================== 滚动石头类（横向障碍物）====================
 class RollingStone {
     constructor(x, y, direction) {
@@ -3513,6 +3622,270 @@ class RollingStone {
     }
 }
 
+// ==================== 管道类（进入地道的入口）====================
+class Pipe {
+    constructor(x, y, height, destination) {
+        this.x = x;
+        this.y = y || 380;  // 默认从地面伸出
+        this.width = 60;
+        this.height = height || 70;
+        this.destination = destination || 'underground'; // 'underground' 或 'surface'
+        this.dead = false;
+        this.enterCooldown = 0;  // 进入冷却时间
+    }
+
+    update() {
+        if (this.enterCooldown > 0) this.enterCooldown--;
+
+        // 检测玩家是否按下了进入键（下键）
+        if (this.enterCooldown === 0 && player && keys['ArrowDown']) {
+            const dist = Math.hypot(player.x - (this.x + this.width/2), player.y - this.y);
+            if (dist < 40 && player.g) {  // 站在管道上且在地面上
+                this.enterPipe();
+            }
+        }
+    }
+
+    enterPipe() {
+        this.enterCooldown = 60;  // 1秒冷却
+
+        if (this.destination === 'underground') {
+            enterUnderground();
+        } else {
+            exitUnderground();
+        }
+    }
+
+    draw() {
+        const screenX = this.x - cam;
+
+        // 管道主体（绿色圆柱形）
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(screenX, this.y, this.width, this.height);
+
+        // 管道顶部（稍宽）
+        ctx.fillStyle = '#2E8B57';
+        ctx.fillRect(screenX - 5, this.y, this.width + 10, 15);
+
+        // 管道边框
+        ctx.strokeStyle = '#006400';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(screenX, this.y, this.width, this.height);
+        ctx.strokeRect(screenX - 5, this.y, this.width + 10, 15);
+
+        // 高光
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(screenX + 8, this.y + 15, 8, this.height - 15);
+
+        // 入口提示（玩家靠近时显示）
+        if (player && Math.abs(player.x - (this.x + this.width/2)) < 50) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            const hint = this.destination === 'underground' ? '↓ 进入地道' : '↑ 返回地面';
+            ctx.fillText(hint, screenX + this.width/2, this.y - 10);
+        }
+    }
+}
+
+// ==================== 地下关卡系统 ====================
+let isInUnderground = false;  // 是否在地道中
+let undergroundPipes = [];    // 地下管道
+let undergroundBlocks = [];   // 地下砖块
+let undergroundEnemies = [];  // 地下敌人
+let undergroundCoins = [];    // 地下金币
+let undergroundTraps = [];    // 地下机关
+
+// 进入地下关卡
+function enterUnderground() {
+    isInUnderground = true;
+
+    // 保存地面状态
+    savedState = {
+        blocks: blocks,
+        enemies: enemies,
+        coins: coins,
+        questions: questions,
+        items: items,
+        pits: pits,
+        stones: stones,
+        clouds: clouds,
+        cam: cam,
+        playerX: player.x,
+        playerY: player.y
+    };
+
+    // 生成地下关卡
+    generateUnderground();
+
+    showHint('🕳️ 进入地下关卡！');
+}
+
+// 生成地下关卡
+function generateUnderground() {
+    undergroundBlocks = [];
+    undergroundEnemies = [];
+    undergroundCoins = [];
+    undergroundTraps = [];
+    undergroundPipes = [];
+
+    const ugLength = 3000;  // 地下关卡长度
+
+    // 地下地面（更深色的砖块）
+    undergroundBlocks.push([0, 450, ugLength, 50]);
+
+    // 地下天花板
+    undergroundBlocks.push([0, 50, ugLength, 50]);
+
+    // 地下墙壁（两侧）
+    undergroundBlocks.push([0, 50, 50, 400]);
+    undergroundBlocks.push([ugLength - 50, 50, 50, 400]);
+
+    // 地下平台布局（类似马里奥地下关）
+    const platformPattern = [
+        [300, 350, 100, 20], [500, 300, 100, 20], [700, 250, 100, 20],
+        [1000, 350, 150, 20], [1300, 280, 100, 20], [1500, 350, 200, 20],
+        [1900, 300, 100, 20], [2100, 250, 100, 20], [2400, 350, 150, 20]
+    ];
+
+    platformPattern.forEach(p => {
+        undergroundBlocks.push(p);
+        // 平台上放金币
+        if (Math.random() > 0.3) {
+            undergroundCoins.push(new Coin(p[0] + p[2]/2, p[1] - 30));
+        }
+    });
+
+    // 地下敌人（更多更强的敌人）
+    for (let i = 200; i < ugLength - 200; i += 300) {
+        undergroundEnemies.push(new Enemy(i, 420, 80));
+    }
+
+    // 地下飞行敌人
+    for (let i = 400; i < ugLength - 200; i += 500) {
+        undergroundEnemies.push(new BirdEnemy(i, 200, 80));
+    }
+
+    // 地下机关（火焰陷阱）
+    for (let i = 600; i < ugLength - 200; i += 800) {
+        undergroundTraps.push(new FireTrap(i, 430));
+    }
+
+    // 出口管道（在地下关卡末尾）
+    undergroundPipes.push(new Pipe(ugLength - 150, 380, 70, 'surface'));
+
+    // 重置玩家位置到地下起点
+    player.x = 100;
+    player.y = 350;
+    cam = 0;
+
+    // 替换游戏对象
+    blocks = undergroundBlocks;
+    enemies = undergroundEnemies;
+    coins = undergroundCoins;
+    pits = [];  // 地下没有坑洞（有天花板）
+    stones = [];
+    clouds = [];
+    questions = [];  // 地下没有问号方块
+}
+
+// 返回地面
+function exitUnderground() {
+    isInUnderground = false;
+
+    // 恢复地面状态
+    if (savedState) {
+        blocks = savedState.blocks;
+        enemies = savedState.enemies;
+        coins = savedState.coins;
+        questions = savedState.questions;
+        items = savedState.items;
+        pits = savedState.pits;
+        stones = savedState.stones;
+        clouds = savedState.clouds;
+        cam = savedState.cam;
+
+        // 将玩家放到管道出口位置
+        const exitPipe = pipes.find(p => p.destination === 'underground');
+        if (exitPipe) {
+            player.x = exitPipe.x + 100;
+            player.y = exitPipe.y - 50;
+        } else {
+            player.x = savedState.playerX;
+            player.y = savedState.playerY;
+        }
+    }
+
+    showHint('☀️ 回到地面！');
+}
+
+// 火焰陷阱类
+class FireTrap {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y || 430;
+        this.width = 40;
+        this.height = 20;
+        this.active = false;
+        this.timer = 0;
+        this.interval = 120;  // 2秒循环
+        this.fireHeight = 60;
+    }
+
+    update() {
+        this.timer++;
+        if (this.timer % this.interval < 60) {
+            this.active = true;  // 前1秒有火焰
+        } else {
+            this.active = false;  // 后1秒安全
+        }
+
+        // 检测玩家碰撞
+        if (this.active && player && !player.invincible) {
+            const px = player.x, py = player.y, pr = player.r;
+            if (px + pr > this.x && px - pr < this.x + this.width &&
+                py + pr > this.y - this.fireHeight && py - pr < this.y) {
+                player.hit();
+            }
+        }
+    }
+
+    draw() {
+        // 陷阱底座
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(this.x - cam, this.y, this.width, 20);
+
+        // 火焰
+        if (this.active) {
+            const flicker = Math.random() * 10;
+            ctx.fillStyle = '#FF4500';
+            ctx.beginPath();
+            ctx.moveTo(this.x - cam, this.y);
+            ctx.lineTo(this.x - cam + 10, this.y - this.fireHeight + flicker);
+            ctx.lineTo(this.x - cam + 20, this.y - this.fireHeight * 0.7 - flicker);
+            ctx.lineTo(this.x - cam + 30, this.y - this.fireHeight + flicker);
+            ctx.lineTo(this.x - cam + this.width, this.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // 火焰内核
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(this.x - cam + 5, this.y);
+            ctx.lineTo(this.x - cam + 15, this.y - this.fireHeight * 0.6);
+            ctx.lineTo(this.x - cam + 25, this.y);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            // 安全状态显示
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(this.x - cam + this.width/2, this.y + 10, 5, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+}
+
 // ==================== 特殊变身箱子类 ====================
 class SpecialTransformBox {
     constructor(x, y) {
@@ -3566,7 +3939,7 @@ class SpecialTransformBox {
 let enemies = [];
 function initPlatformer() {
     player = new Player(); cam = 0;
-    blocks = []; coins = []; questions = []; items = []; enemies = []; pits = []; stones = [];
+    blocks = []; coins = []; questions = []; items = []; enemies = []; pits = []; stones = []; clouds = [];
 
     // 新关卡长度：15000 / 20000 / 25000
     if (level === 1) {
@@ -3601,13 +3974,24 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 250 + Math.random() * 100));
         }
 
-        // 坑洞陷阱（第一关2个）
+        // 坑洞陷阱（第一关2个普通 + 1个大坑洞+云朵组合）
         pits.push(new Pit(2500, 80));
         pits.push(new Pit(8000, 100));
+
+        // 大坑洞+云朵组合（需要踩着云朵跳过去）
+        // 大坑洞位置5500，宽度250（需要云朵帮助才能过）
+        pits.push(new Pit(5500, 250));
+        // 在坑洞中间放置浮动云朵
+        clouds.push(new Cloud(5500 + 125, 320, 140));  // 中央大云朵
+        clouds.push(new Cloud(5500 + 60, 280, 100));   // 左侧小云朵（较高）
+        clouds.push(new Cloud(5500 + 190, 280, 100));  // 右侧小云朵（较高）
 
         // 滚动石头（第一关2个）
         stones.push(new RollingStone(1500, 430, 1));
         stones.push(new RollingStone(6000, 430, -1));
+
+        // 管道入口（进入地道）
+        pipes.push(new Pipe(4500, 380, 70, 'underground'));
 
         flag = {x: levelLength - 300, y: 350};
 
@@ -3639,17 +4023,26 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 220 + Math.random() * 120));
         }
 
-        // 坑洞陷阱（第二关4个）
+        // 坑洞陷阱（第二关4个普通 + 1个大坑洞+云朵组合）
         pits.push(new Pit(2000, 90));
         pits.push(new Pit(5500, 80));
         pits.push(new Pit(11000, 100));
         pits.push(new Pit(16000, 90));
+
+        // 大坑洞+云朵组合（更难，需要连续跳跃）
+        pits.push(new Pit(8500, 300));  // 超大坑洞
+        clouds.push(new Cloud(8500 + 80, 340, 120));   // 起始云朵
+        clouds.push(new Cloud(8500 + 150, 290, 100));  // 中间高云朵
+        clouds.push(new Cloud(8500 + 220, 340, 120));  // 终点云朵
 
         // 滚动石头（第二关4个）
         stones.push(new RollingStone(1200, 430, 1));
         stones.push(new RollingStone(4500, 430, -1));
         stones.push(new RollingStone(9000, 430, 1));
         stones.push(new RollingStone(14000, 430, -1));
+
+        // 管道入口（进入地道）
+        pipes.push(new Pipe(6000, 380, 70, 'underground'));
 
         flag = {x: levelLength - 300, y: 300};
 
@@ -3681,13 +4074,24 @@ function initPlatformer() {
             enemies.push(new BirdEnemy(i, 200 + Math.random() * 150));
         }
 
-        // 坑洞陷阱（第三关6个）
+        // 坑洞陷阱（第三关6个普通 + 2个大坑洞+云朵组合）
         pits.push(new Pit(1800, 100));
         pits.push(new Pit(4500, 90));
         pits.push(new Pit(9000, 110));
         pits.push(new Pit(13000, 80));
         pits.push(new Pit(17000, 100));
         pits.push(new Pit(21000, 90));
+
+        // 大坑洞+云朵组合1（中等难度）
+        pits.push(new Pit(3000, 280));
+        clouds.push(new Cloud(3000 + 100, 330, 130));
+        clouds.push(new Cloud(3000 + 180, 280, 110));
+
+        // 大坑洞+云朵组合2（高难度，移动云朵）
+        pits.push(new Pit(11500, 350));
+        clouds.push(new Cloud(11500 + 90, 360, 120));   // 起始（移动）
+        clouds.push(new Cloud(11500 + 175, 300, 100));  // 中间高
+        clouds.push(new Cloud(11500 + 260, 360, 120));  // 终点（移动）
 
         // 滚动石头（第三关6个）
         stones.push(new RollingStone(1000, 430, 1));
@@ -3696,6 +4100,9 @@ function initPlatformer() {
         stones.push(new RollingStone(11500, 430, -1));
         stones.push(new RollingStone(15000, 430, 1));
         stones.push(new RollingStone(19500, 430, -1));
+
+        // 管道入口（进入地道）
+        pipes.push(new Pipe(8000, 380, 70, 'underground'));
 
         flag = {x: levelLength - 300, y: 280};
     }
@@ -3794,6 +4201,18 @@ function updatePlatformer(timestamp) {
     // 更新滚动石头
     for (let s of stones) s.update();
 
+    // 更新浮动云朵
+    for (let c of clouds) c.update();
+
+    // 更新管道（地下入口/出口）
+    for (let p of pipes) p.update();
+
+    // 如果在地下关卡，更新地下陷阱
+    if (isInUnderground) {
+        for (let t of undergroundTraps) t.update();
+        for (let p of undergroundPipes) p.update();
+    }
+
     for (let q of questions) {
         if (!q.done && Math.hypot(player.x-q.x, player.y-q.y) < 40) {
             // 互斥逻辑：根据方块类型决定是计算题还是道具
@@ -3891,10 +4310,11 @@ function resetLevel() {
     bullets = [];
     items = [];
 
-    // 重新初始化敌人、坑洞、石头
+    // 重新初始化敌人、坑洞、石头、云朵
     enemies = [];
     pits = [];
     stones = [];
+    clouds = [];
 
     const levelLength = level === 1 ? 15000 : (level === 2 ? 20000 : 25000);
 
@@ -3908,6 +4328,11 @@ function resetLevel() {
         }
         pits.push(new Pit(2500, 80));
         pits.push(new Pit(8000, 100));
+        // 大坑洞+云朵组合
+        pits.push(new Pit(5500, 250));
+        clouds.push(new Cloud(5500 + 125, 320, 140));
+        clouds.push(new Cloud(5500 + 60, 280, 100));
+        clouds.push(new Cloud(5500 + 190, 280, 100));
         stones.push(new RollingStone(1500, 430, 1));
         stones.push(new RollingStone(6000, 430, -1));
     } else if (level === 2) {
@@ -3921,6 +4346,11 @@ function resetLevel() {
         pits.push(new Pit(5500, 80));
         pits.push(new Pit(11000, 100));
         pits.push(new Pit(16000, 90));
+        // 大坑洞+云朵组合
+        pits.push(new Pit(8500, 300));
+        clouds.push(new Cloud(8500 + 80, 340, 120));
+        clouds.push(new Cloud(8500 + 150, 290, 100));
+        clouds.push(new Cloud(8500 + 220, 340, 120));
         stones.push(new RollingStone(1200, 430, 1));
         stones.push(new RollingStone(4500, 430, -1));
         stones.push(new RollingStone(9000, 430, 1));
@@ -3938,6 +4368,14 @@ function resetLevel() {
         pits.push(new Pit(13000, 80));
         pits.push(new Pit(17000, 100));
         pits.push(new Pit(21000, 90));
+        // 大坑洞+云朵组合
+        pits.push(new Pit(3000, 280));
+        clouds.push(new Cloud(3000 + 100, 330, 130));
+        clouds.push(new Cloud(3000 + 180, 280, 110));
+        pits.push(new Pit(11500, 350));
+        clouds.push(new Cloud(11500 + 90, 360, 120));
+        clouds.push(new Cloud(11500 + 175, 300, 100));
+        clouds.push(new Cloud(11500 + 260, 360, 120));
         stones.push(new RollingStone(1000, 430, 1));
         stones.push(new RollingStone(3500, 430, -1));
         stones.push(new RollingStone(7000, 430, 1));
@@ -3948,15 +4386,30 @@ function resetLevel() {
 }
 
 function drawPlatformer() {
-    ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,cvs.width,cvs.height);
+    // 根据是否在地下关卡使用不同的背景
+    if (isInUnderground) {
+        // 地下背景（深色洞穴）
+        ctx.fillStyle = '#2D2D2D'; ctx.fillRect(0,0,cvs.width,cvs.height);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    const clouds = [[100,80,30],[300,120,40],[500,60,25],[700,100,35]];
-    for (let i = 0; i < clouds.length; i++) {
-        const [x, y, r] = clouds[i];
-        ctx.beginPath();
-        ctx.arc(x - (cam * 0.3) % (cvs.width + 200) + i*200, y, r, 0, Math.PI*2);
-        ctx.fill();
+        // 地下岩壁纹理
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        for (let i = 0; i < 20; i++) {
+            const rx = (i * 150 - cam * 0.5) % (cvs.width + 200);
+            ctx.fillRect(rx, 20, 80, 30);
+            ctx.fillRect(rx + 40, 80, 60, 20);
+        }
+    } else {
+        // 地面背景（蓝天白云）
+        ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,cvs.width,cvs.height);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        const bgClouds = [[100,80,30],[300,120,40],[500,60,25],[700,100,35]];
+        for (let i = 0; i < bgClouds.length; i++) {
+            const [x, y, r] = bgClouds[i];
+            ctx.beginPath();
+            ctx.arc(x - (cam * 0.3) % (cvs.width + 200) + i*200, y, r, 0, Math.PI*2);
+            ctx.fill();
+        }
     }
 
     // 地面
@@ -3974,8 +4427,20 @@ function drawPlatformer() {
     for (let c of coins) c.draw();
     for (let e of enemies) e.draw();
 
+    // 绘制浮动云朵（在敌人之后，玩家可以跳到上面）
+    for (let c of clouds) c.draw();
+
     // 绘制滚动石头
     for (let s of stones) s.draw();
+
+    // 绘制管道（地下入口）
+    for (let p of pipes) p.draw();
+
+    // 如果在地下关卡，绘制地下特有的元素
+    if (isInUnderground) {
+        for (let t of undergroundTraps) t.draw();
+        for (let p of undergroundPipes) p.draw();
+    }
 
     for (let b of bullets) b.draw();
     for (let q of questions) q.draw();
