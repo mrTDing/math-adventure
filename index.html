@@ -825,7 +825,7 @@ class Player {
                         score += 50;
                         updateUI();
                         AudioSys.playCoin();
-                        showHint('🥚 耀西吞下了敌人！');
+                        // 吃掉敌人，不显示提示
                         break;
                     }
                 }
@@ -3910,22 +3910,26 @@ function generateUnderground() {
         undergroundEnemies.push(new BirdEnemy(i, 200, 80));
     }
 
-    // 地下机关（火焰陷阱）- 间距加大，难度降低
-    for (let i = 800; i < ugLength - 300; i += 1400) {
+    // 地下机关（火焰陷阱）- 数量增加但间距保持，避免连续
+    for (let i = 600; i < ugLength - 300; i += 1000) {
         undergroundTraps.push(new FireTrap(i, 430));
     }
 
-    // 落石机关（从天花板随机掉落）- 间距加大，与前序机关错开
-    undergroundTraps.push(new FallingRock(600, 120));   // 第1个落石
-    undergroundTraps.push(new FallingRock(1200, 240));  // 第2个落石
-    undergroundTraps.push(new FallingRock(2000, 180));  // 第3个落石
-    undergroundTraps.push(new FallingRock(2600, 300));  // 第4个落石
+    // 落石机关（从天花板随机掉落）- 数量增加但分散
+    undergroundTraps.push(new FallingRock(450, 120));   // 第1个落石
+    undergroundTraps.push(new FallingRock(850, 240));   // 第2个落石
+    undergroundTraps.push(new FallingRock(1300, 180));  // 第3个落石
+    undergroundTraps.push(new FallingRock(1750, 300));  // 第4个落石
+    undergroundTraps.push(new FallingRock(2200, 150));  // 第5个落石
+    undergroundTraps.push(new FallingRock(2650, 360));  // 第6个落石
 
-    // 闸门机关（周期性升降）- 间距加大到600-800，与火焰错开
-    undergroundTraps.push(new Gate(500, 330, 120, 200));   // 第1个闸门（慢速）
-    undergroundTraps.push(new Gate(1100, 330, 120, 280));  // 第2个闸门（更慢）
-    undergroundTraps.push(new Gate(1800, 330, 120, 220));  // 第3个闸门
-    undergroundTraps.push(new Gate(2400, 330, 120, 260));  // 第4个闸门
+    // 闸门机关（周期性升降）- 数量增加，与火焰错开位置
+    undergroundTraps.push(new Gate(350, 330, 120, 220));   // 第1个闸门（与火焰错开）
+    undergroundTraps.push(new Gate(800, 330, 120, 280));   // 第2个闸门
+    undergroundTraps.push(new Gate(1250, 330, 120, 200));  // 第3个闸门
+    undergroundTraps.push(new Gate(1700, 330, 120, 260));  // 第4个闸门
+    undergroundTraps.push(new Gate(2150, 330, 120, 220));  // 第5个闸门
+    undergroundTraps.push(new Gate(2600, 330, 120, 240));  // 第6个闸门
 
     // 出口管道（在地下关卡末尾）
     undergroundPipes.push(new Pipe(ugLength - 150, 380, 70, 'surface'));
@@ -4181,8 +4185,8 @@ class Gate {
             this.isOpen = this.openHeight < this.maxOpenHeight * 0.2;
         }
 
-        // 玩家碰撞检测（闸门关闭时）
-        if (!this.isOpen && player && !player.invincible) {
+        // 玩家碰撞检测（闸门升起时）
+        if (player && !player.invincible) {
             const px = player.x, py = player.y, pr = player.r;
             const gateTop = this.y - this.openHeight;
 
@@ -4190,8 +4194,14 @@ class Gate {
             if (px + pr > this.x && px - pr < this.x + this.width &&
                 py + pr > gateTop && py - pr < this.y + this.height) {
 
-                // 从上方落下时，被阻挡
+                // 从上方落下或试图跳过去时，被阻挡并造成伤害（不允许跳过去）
                 if (player.vy > 0 && py - pr < gateTop + 20) {
+                    // 试图从上方跳过去，造成伤害并推开
+                    player.hit();
+                    player.vy = -5; // 向上弹开
+                    player.vx = px < this.x ? -5 : 5; // 向侧面弹开
+                } else if (py - pr < gateTop) {
+                    // 从上方撞上来，被阻挡
                     player.y = gateTop - pr;
                     player.vy = 0;
                     player.g = true;
