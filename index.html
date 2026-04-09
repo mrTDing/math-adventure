@@ -4059,11 +4059,14 @@ class FallingRock {
         this.r = 25;
         this.vy = 0;
         this.vx = 0;
+        this.initialDelay = delay;  // 初始延迟
         this.delay = delay;  // 延迟掉落（帧数）
         this.active = false;
         this.landed = false;
         this.warningTime = 60;  // 预警时间（1秒）
         this.flash = 0;
+        this.disappearTimer = 0;  // 落地后消失计时
+        this.visible = true;  // 是否可见
     }
 
     update() {
@@ -4075,7 +4078,15 @@ class FallingRock {
             return;
         }
 
-        if (this.landed) return;
+        // 落地后处理
+        if (this.landed) {
+            this.disappearTimer++;
+            // 1-2秒（60-120帧）后消失并重置
+            if (this.disappearTimer > 60 + Math.random() * 60) {
+                this.reset();
+            }
+            return;
+        }
 
         // 预警闪烁
         if (this.warningTime > 0) {
@@ -4104,8 +4115,23 @@ class FallingRock {
         }
     }
 
+    // 重置落石，重新开始循环
+    reset() {
+        this.y = 100;
+        this.vy = 0;
+        this.active = false;
+        this.landed = false;
+        this.disappearTimer = 0;
+        this.visible = true;
+        this.delay = this.initialDelay;  // 使用初始延迟
+        this.warningTime = 60;
+    }
+
     draw() {
         const screenX = this.x - cam;
+
+        // 落地消失后不再绘制
+        if (this.landed && this.disappearTimer > 60) return;
 
         // 预警闪烁（掉落前）
         if (!this.landed && this.active && this.warningTime > 0) {
@@ -4174,6 +4200,7 @@ class Gate {
         this.timer = 0;
         this.isOpen = false;  // 是否开启（开启时可以通过）
         this.openHeight = 0;  // 当前开启高度
+        this.prevOpenHeight = 0; // 上一帧的开启高度（用于判断升降方向）
         this.maxOpenHeight = 100;  // 最大开启高度
     }
 
@@ -4193,7 +4220,7 @@ class Gate {
             this.isOpen = this.openHeight < this.maxOpenHeight * 0.2;
         }
 
-        // 玩家碰撞检测（闸门升起时）
+        // 玩家碰撞检测：只在闸门关闭或下落时造成伤害，升起时可通过
         if (player && !player.invincible) {
             const px = player.x, py = player.y, pr = player.r;
             const gateTop = this.y - this.openHeight;
@@ -4202,23 +4229,32 @@ class Gate {
             if (px + pr > this.x && px - pr < this.x + this.width &&
                 py + pr > gateTop && py - pr < this.y + this.height) {
 
-                // 从上方落下或试图跳过去时，被阻挡并造成伤害（不允许跳过去）
-                if (player.vy > 0 && py - pr < gateTop + 20) {
-                    // 试图从上方跳过去，造成伤害并推开
+                // 闸门状态判断：openHeight小=关闭，正在减小=下落中
+                const isRising = this.openHeight > this.prevOpenHeight; // 正在升起
+                const isFullyOpen = this.openHeight > this.maxOpenHeight * 0.7; // 几乎完全升起
+
+                // 如果闸门正在升起或已完全升起，玩家可以通过，不造成伤害
+                if (isRising || isFullyOpen) {
+                    // 允许通过，不处理碰撞
+                    this.prevOpenHeight = this.openHeight;
+                    return;
+                }
+
+                // 闸门关闭或下落中：造成伤害/阻挡
+                // 从侧面碰撞
+                if (px + pr > this.x && px - pr < this.x + this.width &&
+                    py > gateTop && py < this.y + this.height) {
                     player.hit();
-                    player.vy = -5; // 向上弹开
-                    player.vx = px < this.x ? -5 : 5; // 向侧面弹开
-                } else if (py - pr < gateTop) {
-                    // 从上方撞上来，被阻挡
-                    player.y = gateTop - pr;
-                    player.vy = 0;
-                    player.g = true;
-                    player.j = 0;
-                } else {
-                    // 侧面碰撞，造成伤害
+                    player.vx = px < this.x + this.width/2 ? -8 : 8;
+                }
+                // 从上方落下
+                else if (player.vy > 0 && py - pr < gateTop + 15) {
                     player.hit();
+                    player.vy = -5;
                 }
             }
+
+            this.prevOpenHeight = this.openHeight;
         }
     }
 
@@ -4319,34 +4355,32 @@ let enemies = [];
 let terrainPoints = []; // 地形高度点数组 [x, y]
 let terrainSegments = []; // 地形线段数组，用于碰撞检测
 
-// 生成起伏地形（冒险岛风格：波段起伏，有平地有起伏）
+// 生成起伏地形（冒险岛风格：波段起伏，有平地有起伏，但坡度平缓）
 function generateTerrain(levelLength, pitList, seed = 1) {
     const points = [];
     const segments = [];
     const baseY = 450;
-    const amplitude = 50; // 起伏幅度
+    const amplitude = 25; // 减小起伏幅度（原来是50）
+    const maxSlope = 0.15; // 最大坡度限制（防止需要跳跃）
 
     // 按x坐标排序坑洞
     const sortedPits = [...pitList].sort((a, b) => a.x - b.x);
 
-    // 定义地形波段：平地段和起伏段交替
-    const sections = [];
-    let sectionX = 0;
-    let sectionType = 0; // 0=平地, 1=起伏
-
-    while (sectionX < levelLength) {
-        const sectionLength = 800 + Math.random() * 1200; // 每段800-2000像素
-        sections.push({
-            start: sectionX,
-            end: Math.min(sectionX + sectionLength, levelLength),
-            type: sectionType,
-            seed: Math.random() * 100
-        });
-        sectionX += sectionLength;
-        sectionType = 1 - sectionType; // 交替切换
+    // 预先生成基础波形（低分辨率）
+    const wavePoints = [];
+    const waveSpacing = 200; // 每200像素一个波形控制点
+    for (let x = 0; x <= levelLength + waveSpacing; x += waveSpacing) {
+        // 交替生成平地和轻微起伏
+        const isFlat = Math.floor(x / (1000 + Math.random() * 500)) % 2 === 0;
+        if (isFlat) {
+            wavePoints.push({ x, y: baseY });
+        } else {
+            wavePoints.push({ x, y: baseY + (Math.random() - 0.5) * amplitude * 2 });
+        }
     }
 
     // 生成地形点（每10像素一个点）
+    let lastY = baseY;
     for (let x = 0; x <= levelLength; x += 10) {
         let y = baseY;
 
@@ -4360,28 +4394,41 @@ function generateTerrain(levelLength, pitList, seed = 1) {
         }
 
         if (!inPit) {
-            // 找到当前x属于哪个段落
-            let inSection = null;
-            for (const sec of sections) {
-                if (x >= sec.start && x < sec.end) {
-                    inSection = sec;
+            // 在波形控制点之间插值
+            for (let i = 0; i < wavePoints.length - 1; i++) {
+                if (x >= wavePoints[i].x && x < wavePoints[i + 1].x) {
+                    const t = (x - wavePoints[i].x) / (wavePoints[i + 1].x - wavePoints[i].x);
+                    // 使用平滑插值
+                    const rawY = wavePoints[i].y + (wavePoints[i + 1].y - wavePoints[i].y) * t;
+                    // 添加微小噪声
+                    y = rawY + Math.sin(x * 0.05) * 3;
                     break;
                 }
             }
 
-            if (inSection && inSection.type === 1) {
-                // 起伏段：使用正弦波
-                const localX = x - inSection.start;
-                const progress = localX / (inSection.end - inSection.start);
-                const wave = Math.sin(progress * Math.PI * 2 + inSection.seed) * amplitude;
-                // 添加一些小的波动
-                const smallWave = Math.sin(x * 0.02) * 10;
-                y = baseY + wave + smallWave;
-            } else {
-                // 平地段：固定高度，添加微小波动让地面更自然
-                y = baseY + Math.sin(x * 0.01) * 2;
+            // 限制坡度：确保与上一个点的高度差不超过限制
+            const maxDelta = 10 * maxSlope; // 每10像素的最大高度变化
+            if (points.length > 0 && points[points.length - 1].y !== null) {
+                const prevY = points[points.length - 1].y;
+                if (y > prevY + maxDelta) y = prevY + maxDelta;
+                if (y < prevY - maxDelta) y = prevY - maxDelta;
             }
 
+            // 确保坑洞边缘高度与坑洞齐平（坑洞底部y=550）
+            for (const pit of sortedPits) {
+                // 坑洞前边缘：平滑下降到坑洞
+                if (x >= pit.x - 50 && x < pit.x) {
+                    const t = (x - (pit.x - 50)) / 50;
+                    y = lastY + (550 - lastY) * t;
+                }
+                // 坑洞后边缘：平滑上升出坑洞
+                if (x > pit.x + pit.width && x <= pit.x + pit.width + 50) {
+                    const t = (x - (pit.x + pit.width)) / 50;
+                    y = 550 + (baseY - 550) * t;
+                }
+            }
+
+            lastY = y;
             points.push({ x, y });
         } else {
             // 坑洞位置不生成地形点
