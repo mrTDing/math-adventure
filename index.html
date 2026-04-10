@@ -3888,26 +3888,21 @@ function generateUnderground() {
         undergroundEnemies.push(new BirdEnemy(i, 200, 80));
     }
 
-    // 地下机关（火焰陷阱）- 数量增加但间距保持，避免连续
-    for (let i = 600; i < ugLength - 300; i += 1000) {
-        undergroundTraps.push(new FireTrap(i, 430));
-    }
+    // 地下机关 - 为小朋友优化：增大间距，错开分布，降低难度
+    // 火焰陷阱：间距约1200，给足够反应时间
+    undergroundTraps.push(new FireTrap(700, 430));
+    undergroundTraps.push(new FireTrap(2200, 430));
 
-    // 落石机关（从天花板随机掉落）- 数量增加但分散
-    undergroundTraps.push(new FallingRock(450, 120));   // 第1个落石
-    undergroundTraps.push(new FallingRock(850, 240));   // 第2个落石
-    undergroundTraps.push(new FallingRock(1300, 180));  // 第3个落石
-    undergroundTraps.push(new FallingRock(1750, 300));  // 第4个落石
-    undergroundTraps.push(new FallingRock(2200, 150));  // 第5个落石
-    undergroundTraps.push(new FallingRock(2650, 360));  // 第6个落石
+    // 落石机关：减少到3个，间距约800，与火焰陷阱错开
+    undergroundTraps.push(new FallingRock(1100, 90));    // 第1个落石，延迟1.5秒
+    undergroundTraps.push(new FallingRock(1900, 120));   // 第2个落石，延迟2秒
+    undergroundTraps.push(new FallingRock(2800, 60));    // 第3个落石，延迟1秒
 
-    // 闸门机关（周期性升降）- 数量增加，与火焰错开位置
-    undergroundTraps.push(new Gate(350, 330, 120, 220));   // 第1个闸门（与火焰错开）
-    undergroundTraps.push(new Gate(800, 330, 120, 280));   // 第2个闸门
-    undergroundTraps.push(new Gate(1250, 330, 120, 200));  // 第3个闸门
-    undergroundTraps.push(new Gate(1700, 330, 120, 260));  // 第4个闸门
-    undergroundTraps.push(new Gate(2150, 330, 120, 220));  // 第5个闸门
-    undergroundTraps.push(new Gate(2600, 330, 120, 240));  // 第6个闸门
+    // 闸门机关：减少到3个，间距约900，与其他机关完全错开
+    // 参数：x, y, 高度, 周期(帧数) - 周期240=开启4秒/关闭4秒，给小朋友充足时间
+    undergroundTraps.push(new Gate(400, 330, 100, 240));   // 第1个闸门（起始区域）
+    undergroundTraps.push(new Gate(1550, 330, 100, 280));  // 第2个闸门（两火焰中间偏前）
+    undergroundTraps.push(new Gate(2500, 330, 100, 260));  // 第3个闸门（第二火焰后）
 
     // 出口管道（在地下关卡末尾）
     undergroundPipes.push(new Pipe(ugLength - 150, 380, 70, 'surface'));
@@ -3966,7 +3961,7 @@ class FireTrap {
         this.height = 20;
         this.active = false;
         this.timer = 0;
-        this.interval = 120;  // 2秒循环
+        this.interval = 180;  // 3秒循环（1秒火焰/2秒安全），给小朋友更多安全时间
         this.fireHeight = 60;
     }
 
@@ -4033,7 +4028,7 @@ class FallingRock {
         this.delay = delay;  // 延迟掉落（帧数）
         this.active = false;
         this.landed = false;
-        this.warningTime = 60;  // 预警时间（1秒）
+        this.warningTime = 90;  // 预警时间（1.5秒）给小朋友更多反应时间
         this.flash = 0;
         this.disappearTimer = 0;  // 落地后消失计时
         this.visible = true;  // 是否可见
@@ -4093,8 +4088,8 @@ class FallingRock {
         this.landed = false;
         this.disappearTimer = 0;
         this.visible = true;
-        this.delay = this.initialDelay;  // 使用初始延迟
-        this.warningTime = 60;
+        this.delay = this.initialDelay + 60;  // 重置时额外增加1秒延迟，给小朋友喘息时间
+        this.warningTime = 90;
     }
 
     draw() {
